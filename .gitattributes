@@ -18,9 +18,25 @@
 
 # Dockerfile
 Dockerfile linguist-detectable=true
+*.Dockerfile linguist-detectable=true
 
-# Shell
+# Shell / Batch
 *.sh linguist-detectable=true
+*.bat linguist-detectable=true
+*.cmd linguist-detectable=true
+
+# YAML
+*.yml linguist-detectable=true
+*.yaml linguist-detectable=true
+
+# SVG
+*.svg linguist-detectable=true
 
 # Exclude vendored/generated files from language stats
 frontend/package-lock.json linguist-generated=true
+*.json linguist-vendored=true
+*.md linguist-documentation=true
+*.txt linguist-documentation=true
+*.ico linguist-vendored=true
+*.example linguist-vendored=true
+*.gitignore linguist-vendored=true
