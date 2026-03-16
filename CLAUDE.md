@@ -1,21 +1,14 @@
-# NewGen Realty AI
+# CLAUDE.md
 
-AI-powered real estate platform for Louisiana.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Architecture
-
-- **Backend**: FastAPI (Python 3.12+) at `backend/` — async, SQLAlchemy 2.0, Anthropic Claude API
-- **Frontend**: Next.js 16 (React 19, TypeScript, Tailwind CSS) at `frontend/`
-- **Database**: SQLite (local dev) / PostgreSQL (Docker)
-- **AI**: Anthropic Claude via `app/services/ai_assistant.py`, with daily usage tracking and rate limiting
-
-## Running Locally
+## Commands
 
 ```bash
 # Backend
 cd backend
 python -m venv venv
-source venv/Scripts/activate  # Windows: venv\Scripts\activate
+source venv/Scripts/activate   # Windows Git Bash
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
@@ -23,56 +16,58 @@ uvicorn app.main:app --reload --port 8000
 cd frontend
 npm install
 npm run dev
+
+# Docker (both services + PostgreSQL)
+docker compose up --build
+
+# Type check frontend
+cd frontend && npx tsc --noEmit
+
+# Verify backend imports
+cd backend && python -c "from app.main import app"
+
+# Windows convenience scripts
+start.bat   # starts both backend + frontend
+stop.bat    # stops both
 ```
 
 Backend: http://localhost:8000 | Frontend: http://localhost:3000
 
-## Running with Docker
+## Architecture
 
-Requires virtualization enabled in BIOS.
+FastAPI backend + Next.js 16 frontend. SQLite locally, PostgreSQL in Docker. AI via Anthropic Claude sync client.
 
-```bash
-docker compose up --build
+### Async/Sync Pattern (critical to understand)
+
+Endpoints are `async def` and use `AsyncSession` for all database queries (`await db.execute(select(...))`). AI service functions (`services/`) are **sync** — they call the Anthropic sync client directly. FastAPI automatically runs sync functions in a threadpool when called from async endpoints, so this works without blocking. **Do not make AI service functions async** — they use the sync Anthropic client.
+
+### AI Service Flow
+
+```
+Router (async) → gathers data from DB → calls sync service function → service calls assistant.chat() → parses response with regex → returns dict → router saves results to DB
 ```
 
-## Project Structure
+The `AIAssistant` singleton in `services/ai_assistant.py` wraps the Anthropic client with lazy init, rate limiting (`UsageTracker`), and cost tracking. All other services (`listing_generator.py`, `comp_analyzer.py`, `comm_drafter.py`, `lead_scorer.py`, `property_matcher.py`) call `assistant.chat()` with specialized system prompts from `prompts/`, then parse structured sections (e.g., `HEADLINE:`, `SCORE:`, `MATCH:`) from the response text using regex.
 
-```
-backend/
-  app/
-    main.py              # FastAPI app, lifespan, CORS
-    config.py            # Settings via pydantic-settings
-    database.py          # Async SQLAlchemy engine + session
-    models/              # SQLAlchemy ORM models (property, contact, conversation)
-    schemas/             # Pydantic request/response schemas
-    routers/             # API routes (properties, contacts, ai)
-    services/            # AI assistant, listing gen, comp analysis, comm drafter
-    prompts/             # System prompts and templates (Louisiana-specific)
-frontend/
-  src/
-    app/                 # Next.js pages (dashboard, ai, properties, contacts)
-    components/layout/   # Sidebar nav
-    lib/                 # API client (axios), types
-```
+### Database
 
-## Key API Endpoints
+Async SQLAlchemy 2.0. Engine created in `database.py`, sessions via `get_db()` dependency. Tables auto-created on startup via lifespan handler in `main.py`. Models: Property, Contact, Activity, Conversation — all use UUID string primary keys.
 
-- `GET /api/health` — health check
-- `GET/POST /api/properties` — CRUD for property listings
-- `GET/POST /api/contacts` — CRUD for contacts/leads
-- `POST /api/ai/chat` — chat with AI assistant
-- `POST /api/ai/generate-listing` — AI listing description generator
-- `POST /api/ai/analyze-comps` — comparable sales analysis
-- `POST /api/ai/draft-communication` — draft emails/texts
-- `GET /api/ai/usage` — daily AI usage stats
+### Frontend
 
-## Environment Variables
-
-See `backend/.env.example`. Required: `ANTHROPIC_API_KEY`. Default DB is SQLite; docker-compose overrides to PostgreSQL.
+Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/api.ts` (axios, baseURL defaults to `localhost:8000`). Types in `lib/types.ts`. Path alias: `@/*` → `./src/*`. Tailwind v4 (no config file, uses defaults).
 
 ## Conventions
 
-- Backend uses async throughout (async def endpoints, AsyncSession)
-- AI service functions are sync (use Anthropic sync client, FastAPI runs them in threadpool)
-- All models use UUID primary keys
-- Louisiana-specific: parishes instead of counties, LA-focused system prompts
+- All models use `String(36)` UUID primary keys with `default=lambda: str(uuid.uuid4())`
+- Pydantic schemas use `class Config: from_attributes = True` for ORM mode
+- Louisiana-specific throughout: parishes (not counties), Civil Law, redhibition, flood zones, homestead exemption — these are baked into system prompts in `prompts/system_prompts.py`
+- CORS only allows `http://localhost:3000`
+- List endpoints support `limit`/`offset` pagination (default 50, max 200)
+- Activity logging: contact/property updates and AI actions auto-create Activity records
+- `last_contact_date` on Contact auto-updates when activities are created for that contact
+- AI chat auto-persists conversations to the Conversation model with auto-titling from first message
+
+## Environment Variables
+
+Required: `ANTHROPIC_API_KEY`. See `backend/.env.example`. Default DB is `sqlite+aiosqlite:///./newgen.db`; docker-compose overrides to PostgreSQL (`asyncpg`). AI model configured via `AI_MODEL` setting (default: `claude-sonnet-4-20250514`).
