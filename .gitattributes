@@ -1,0 +1,26 @@
+# Auto detect text files and normalize line endings
+* text=auto
+
+# Python
+*.py linguist-detectable=true
+
+# TypeScript / JavaScript
+*.ts linguist-detectable=true
+*.tsx linguist-detectable=true
+*.js linguist-detectable=true
+*.mjs linguist-detectable=true
+
+# CSS
+*.css linguist-detectable=true
+
+# HTML
+*.html linguist-detectable=true
+
+# Dockerfile
+Dockerfile linguist-detectable=true
+
+# Shell
+*.sh linguist-detectable=true
+
+# Exclude vendored/generated files from language stats
+frontend/package-lock.json linguist-generated=true
