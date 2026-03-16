@@ -1,11 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getContacts, createContact, deleteContact } from "@/lib/api";
 import type { Contact } from "@/lib/types";
+import StatusBadge from "@/components/ui/StatusBadge";
+import LeadScoreBadge from "@/components/ui/LeadScoreBadge";
+import FilterBar, { type FilterConfig } from "@/components/ui/FilterBar";
+
+const contactFilters: FilterConfig[] = [
+  { key: "q", label: "Search", type: "text", placeholder: "Name or email..." },
+  {
+    key: "contact_type", label: "Type", type: "select",
+    options: [
+      { value: "lead", label: "Lead" },
+      { value: "buyer", label: "Buyer" },
+      { value: "seller", label: "Seller" },
+      { value: "both", label: "Both" },
+    ],
+  },
+  { key: "min_score", label: "Min Score", type: "text", placeholder: "e.g. 60" },
+];
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [filters, setFilters] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
@@ -18,11 +37,11 @@ export default function ContactsPage() {
 
   useEffect(() => {
     loadContacts();
-  }, []);
+  }, [filters]);
 
   async function loadContacts() {
     try {
-      const res = await getContacts();
+      const res = await getContacts(filters);
       setContacts(res.data);
     } catch {
       // API not running
@@ -41,18 +60,13 @@ export default function ContactsPage() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(e: React.MouseEvent, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
     if (!confirm("Delete this contact?")) return;
     await deleteContact(id);
     loadContacts();
   }
-
-  const typeColors: Record<string, string> = {
-    buyer: "bg-blue-100 text-blue-700",
-    seller: "bg-emerald-100 text-emerald-700",
-    both: "bg-purple-100 text-purple-700",
-    lead: "bg-amber-100 text-amber-700",
-  };
 
   return (
     <div>
@@ -80,10 +94,12 @@ export default function ContactsPage() {
         </form>
       )}
 
+      <FilterBar filters={contactFilters} onFilter={setFilters} />
+
       {contacts.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-400">
-          <p className="text-lg">No contacts yet</p>
-          <p className="text-sm mt-2">Add your first contact to start building your network</p>
+          <p className="text-lg">No contacts found</p>
+          <p className="text-sm mt-2">Add your first contact or adjust filters</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -92,6 +108,7 @@ export default function ContactsPage() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Score</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Phone</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600"></th>
@@ -99,17 +116,22 @@ export default function ContactsPage() {
             </thead>
             <tbody>
               {contacts.map((c) => (
-                <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{c.first_name} {c.last_name}</td>
+                <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/contacts/${c.id}`}>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    <Link href={`/contacts/${c.id}`} className="hover:text-emerald-600">
+                      {c.first_name} {c.last_name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${typeColors[c.contact_type] || ""}`}>
-                      {c.contact_type}
-                    </span>
+                    <StatusBadge value={c.contact_type} variant="type" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <LeadScoreBadge score={c.ai_lead_score} size="sm" />
                   </td>
                   <td className="px-4 py-3 text-gray-600">{c.email || "—"}</td>
                   <td className="px-4 py-3 text-gray-600">{c.phone || "—"}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500">Delete</button>
+                    <button onClick={(e) => handleDelete(e, c.id)} className="text-gray-400 hover:text-red-500">Delete</button>
                   </td>
                 </tr>
               ))}

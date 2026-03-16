@@ -33,12 +33,64 @@ export interface Contact {
   preferred_parishes: string[] | null;
   budget_min: number | null;
   budget_max: number | null;
+  preferred_property_types: string[] | null;
+  preferred_cities: string[] | null;
+  source: string | null;
+  last_contact_date: string | null;
+  ai_lead_score: number | null;
+  ai_lead_score_reason: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface Activity {
+  id: string;
+  activity_type: string;
+  title: string;
+  description: string | null;
+  contact_id: string | null;
+  property_id: string | null;
+  extra_data: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string | null;
+  context_type: string | null;
+  context_id: string | null;
+  messages: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadScoreResult {
+  contact_id: string;
+  score: number;
+  reason: string;
+  suggested_action: string | null;
+}
+
+export interface PropertyMatchItem {
+  property_id: string;
+  match_score: number;
+  reason: string;
+}
+
+export interface PropertyMatchResult {
+  contact_id: string;
+  matches: PropertyMatchItem[];
+}
+
+export interface DashboardInsights {
+  insights: string[];
+  actions: string[];
+  opportunities: string[];
+  raw_analysis: string;
 }

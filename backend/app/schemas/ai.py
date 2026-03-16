@@ -78,3 +78,42 @@ class CommDraftRequest(BaseModel):
 class CommDraftResponse(BaseModel):
     subject: Optional[str] = None  # email only
     body: str
+
+
+# --- Lead Scoring ---
+
+class LeadScoreRequest(BaseModel):
+    contact_id: str
+
+
+class LeadScoreResponse(BaseModel):
+    contact_id: str
+    score: float
+    reason: str
+    suggested_action: Optional[str] = None
+
+
+# --- Property Matching ---
+
+class PropertyMatchRequest(BaseModel):
+    contact_id: str
+
+
+class PropertyMatchItem(BaseModel):
+    property_id: str
+    match_score: int
+    reason: str
+
+
+class PropertyMatchResponse(BaseModel):
+    contact_id: str
+    matches: list[PropertyMatchItem]
+
+
+# --- Dashboard Insights ---
+
+class DashboardInsightsResponse(BaseModel):
+    insights: list[str]
+    actions: list[str]
+    opportunities: list[str]
+    raw_analysis: str

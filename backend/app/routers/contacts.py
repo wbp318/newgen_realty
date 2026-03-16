@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.models.activity import Activity
 from app.models.contact import Contact
 from app.schemas.contact import ContactCreate, ContactResponse, ContactUpdate
 
@@ -10,8 +13,32 @@ router = APIRouter(prefix="/api/contacts", tags=["contacts"])
 
 
 @router.get("", response_model=list[ContactResponse])
-async def list_contacts(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Contact).order_by(Contact.created_at.desc()))
+async def list_contacts(
+    contact_type: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
+    min_score: Optional[float] = Query(None, description="Minimum AI lead score"),
+    q: Optional[str] = Query(None, description="Text search across name and email"),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Contact).order_by(Contact.created_at.desc())
+    if contact_type:
+        query = query.where(Contact.contact_type == contact_type)
+    if source:
+        query = query.where(Contact.source == source)
+    if min_score is not None:
+        query = query.where(Contact.ai_lead_score >= min_score)
+    if q:
+        query = query.where(
+            or_(
+                Contact.first_name.ilike(f"%{q}%"),
+                Contact.last_name.ilike(f"%{q}%"),
+                Contact.email.ilike(f"%{q}%"),
+            )
+        )
+    query = query.limit(limit).offset(offset)
+    result = await db.execute(query)
     return result.scalars().all()
 
 
@@ -39,10 +66,23 @@ async def update_contact(contact_id: str, data: ContactUpdate, db: AsyncSession 
     contact = result.scalar_one_or_none()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
-    for key, value in data.model_dump(exclude_none=True).items():
+    updated_fields = data.model_dump(exclude_none=True)
+    for key, value in updated_fields.items():
         setattr(contact, key, value)
     await db.commit()
     await db.refresh(contact)
+
+    # Log activity for the update
+    if updated_fields:
+        field_names = ", ".join(updated_fields.keys())
+        activity = Activity(
+            activity_type="note",
+            title=f"Contact updated: {field_names}",
+            contact_id=contact_id,
+        )
+        db.add(activity)
+        await db.commit()
+
     return contact
 
 

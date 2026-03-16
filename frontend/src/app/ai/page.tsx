@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { aiChat, generateListing, draftCommunication } from "@/lib/api";
-import type { ChatMessage } from "@/lib/types";
+import { aiChat, generateListing, draftCommunication, getConversations, deleteConversation } from "@/lib/api";
+import type { ChatMessage, Conversation } from "@/lib/types";
 
 const quickActions = [
   { id: "chat", label: "General Chat", desc: "Ask anything about LA real estate" },
@@ -15,6 +15,8 @@ export default function AIAssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeAction, setActiveAction] = useState("chat");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Listing form state
@@ -42,8 +44,38 @@ export default function AIAssistantPage() {
   });
 
   useEffect(() => {
+    loadConversations();
+  }, []);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  async function loadConversations() {
+    try {
+      const res = await getConversations();
+      setConversations(res.data);
+    } catch {
+      // ignore
+    }
+  }
+
+  function loadConversation(convo: Conversation) {
+    setConversationId(convo.id);
+    setMessages(convo.messages || []);
+    setActiveAction("chat");
+  }
+
+  function startNewChat() {
+    setConversationId(null);
+    setMessages([]);
+  }
+
+  async function handleDeleteConversation(id: string) {
+    await deleteConversation(id);
+    if (conversationId === id) startNewChat();
+    loadConversations();
+  }
 
   async function handleChat(e: React.FormEvent) {
     e.preventDefault();
@@ -56,8 +88,10 @@ export default function AIAssistantPage() {
     setLoading(true);
 
     try {
-      const res = await aiChat(newMessages);
+      const res = await aiChat(newMessages, conversationId);
       setMessages([...newMessages, { role: "assistant", content: res.data.response }]);
+      setConversationId(res.data.conversation_id);
+      loadConversations();
     } catch {
       setMessages([...newMessages, { role: "assistant", content: "Error: Could not reach the AI service. Make sure the backend is running." }]);
     }
@@ -165,6 +199,34 @@ export default function AIAssistantPage() {
               {loading ? "Generating..." : "Generate Listing"}
             </button>
           </form>
+        )}
+
+        {/* Conversation History */}
+        {activeAction === "chat" && conversations.length > 0 && (
+          <div className="mt-4 border-t pt-3">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase">History</h3>
+              <button onClick={startNewChat} className="text-xs text-emerald-600 hover:text-emerald-700">+ New</button>
+            </div>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {conversations.map((c) => (
+                <div key={c.id} className={`flex items-center gap-1 group ${conversationId === c.id ? "bg-emerald-50" : ""} rounded`}>
+                  <button
+                    onClick={() => loadConversation(c)}
+                    className="flex-1 text-left text-xs text-gray-700 px-2 py-1.5 rounded hover:bg-gray-50 truncate"
+                  >
+                    {c.title || "Untitled"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteConversation(c.id)}
+                    className="text-gray-400 hover:text-red-500 px-1 opacity-0 group-hover:opacity-100 text-xs"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Communication Form */}

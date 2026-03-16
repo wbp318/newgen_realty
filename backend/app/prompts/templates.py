@@ -65,3 +65,77 @@ MEDIUM_INSTRUCTIONS = {
     "email": "Provide a subject line and email body. Format as:\nSUBJECT: [subject]\nBODY: [email body]",
     "text": "Provide a text message. Keep it concise (under 300 characters if possible). Format as:\nBODY: [text message]",
 }
+
+LEAD_SCORING_TEMPLATE = """Score this real estate lead from 0-100 based on their likelihood to transact.
+
+## Contact Profile
+- **Name:** {contact_name}
+- **Type:** {contact_type}
+- **Budget:** {budget_min} - {budget_max}
+- **Preferred Parishes:** {preferred_parishes}
+- **Preferred Property Types:** {preferred_property_types}
+- **Preferred Cities:** {preferred_cities}
+- **Source:** {source}
+- **Last Contact Date:** {last_contact_date}
+
+## Activity History
+- Total activities: {num_activities}
+- Recent activity:
+{recent_activities}
+
+## Available Inventory Match
+- Properties matching preferences: {num_matching_properties}
+{matching_properties_summary}
+
+Score this lead and explain your reasoning. Format as:
+SCORE: [integer 0-100]
+REASON: [2-3 sentence explanation]
+ACTION: [specific next step]
+"""
+
+PROPERTY_MATCHING_TEMPLATE = """Match this contact to the best available properties.
+
+## Contact Profile
+- **Name:** {contact_name}
+- **Type:** {contact_type}
+- **Budget:** {budget_min} - {budget_max}
+- **Preferred Parishes:** {preferred_parishes}
+- **Preferred Property Types:** {preferred_property_types}
+- **Preferred Cities:** {preferred_cities}
+- **Notes:** {notes}
+
+## Available Properties
+{properties}
+
+For each property that could be a match (score 30+), provide:
+MATCH: [property_id]
+SCORE: [0-100]
+REASON: [why this matches or doesn't match well]
+"""
+
+DASHBOARD_INSIGHTS_TEMPLATE = """Analyze this real estate portfolio and generate actionable insights.
+
+## Portfolio Summary
+- Total properties: {num_properties}
+- Active listings: {num_active}
+- Total contacts: {num_contacts}
+- Active leads: {num_leads}
+- Total portfolio value: ${portfolio_value:,}
+
+## Properties by Parish
+{properties_by_parish}
+
+## Properties by Status
+{properties_by_status}
+
+## Price Distribution
+{price_distribution}
+
+## Recent Activity ({num_recent_activities} in last 7 days)
+{recent_activity_summary}
+
+## Contact Preferences
+{contact_preferences}
+
+Analyze this data and provide specific, actionable insights. Reference actual parishes, price ranges, and patterns.
+"""

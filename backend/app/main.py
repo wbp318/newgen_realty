@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import properties, contacts, ai
+from app.routers import properties, contacts, ai, activities, conversations
 
 
 @asynccontextmanager
@@ -32,6 +32,8 @@ app.add_middleware(
 app.include_router(properties.router)
 app.include_router(contacts.router)
 app.include_router(ai.router)
+app.include_router(activities.router)
+app.include_router(conversations.router)
 
 
 @app.get("/api/health")

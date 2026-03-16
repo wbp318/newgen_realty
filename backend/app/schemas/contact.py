@@ -13,6 +13,9 @@ class ContactCreate(BaseModel):
     preferred_parishes: Optional[list[str]] = None
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
+    preferred_property_types: Optional[list[str]] = None
+    preferred_cities: Optional[list[str]] = None
+    source: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -25,6 +28,12 @@ class ContactUpdate(BaseModel):
     preferred_parishes: Optional[list[str]] = None
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
+    preferred_property_types: Optional[list[str]] = None
+    preferred_cities: Optional[list[str]] = None
+    source: Optional[str] = None
+    last_contact_date: Optional[datetime] = None
+    ai_lead_score: Optional[float] = None
+    ai_lead_score_reason: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -38,6 +47,12 @@ class ContactResponse(BaseModel):
     preferred_parishes: Optional[list[str]] = None
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
+    preferred_property_types: Optional[list[str]] = None
+    preferred_cities: Optional[list[str]] = None
+    source: Optional[str] = None
+    last_contact_date: Optional[datetime] = None
+    ai_lead_score: Optional[float] = None
+    ai_lead_score_reason: Optional[str] = None
     notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime

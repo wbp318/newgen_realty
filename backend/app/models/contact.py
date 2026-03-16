@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Integer, String, Text, func
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text, func
 from sqlalchemy import JSON
 
 from app.database import Base
@@ -26,6 +26,12 @@ class Contact(Base):
     preferred_parishes = Column(JSON, default=list)
     budget_min = Column(Integer)
     budget_max = Column(Integer)
+    preferred_property_types = Column(JSON, default=list)
+    preferred_cities = Column(JSON, default=list)
+    source = Column(String(50))
+    last_contact_date = Column(DateTime)
+    ai_lead_score = Column(Float)
+    ai_lead_score_reason = Column(Text)
     notes = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

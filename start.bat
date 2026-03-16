@@ -1,0 +1,57 @@
+@echo off
+title NewGen Realty - Launcher
+echo ================================
+echo   NewGen Realty AI - Launcher
+echo ================================
+echo.
+
+:: Kill any zombie processes on port 3000
+echo Clearing port 3000...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 ^| findstr LISTENING') do (
+    echo   Killing leftover process on port 3000 (PID %%a)
+    taskkill /F /PID %%a >nul 2>&1
+)
+
+:: Kill any zombie processes on port 8000
+echo Clearing port 8000...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8000 ^| findstr LISTENING') do (
+    echo   Killing leftover process on port 8000 (PID %%a)
+    taskkill /F /PID %%a >nul 2>&1
+)
+
+:: Clean stale Next.js cache
+echo Cleaning Next.js cache...
+if exist "%~dp0frontend\.next\dev\lock" del /f "%~dp0frontend\.next\dev\lock" >nul 2>&1
+rmdir /s /q "%~dp0frontend\.next" >nul 2>&1
+
+timeout /t 2 /nobreak >nul
+
+:: Start backend
+echo.
+echo Starting backend on http://localhost:8000 ...
+cd /d "%~dp0backend"
+start "NewGen Backend" cmd /k "call venv\Scripts\activate && uvicorn app.main:app --reload --port 8000"
+
+:: Give backend a moment to boot
+timeout /t 3 /nobreak >nul
+
+:: Start frontend
+echo Starting frontend on http://localhost:3000 ...
+cd /d "%~dp0frontend"
+start "NewGen Frontend" cmd /k "npm run dev"
+
+:: Wait for frontend to be ready
+timeout /t 6 /nobreak >nul
+
+:: Open browser
+start http://localhost:3000
+
+echo.
+echo ================================
+echo   Both servers are running!
+echo   Frontend: http://localhost:3000
+echo   Backend:  http://localhost:8000
+echo ================================
+echo.
+echo Close the "NewGen Backend" and "NewGen Frontend" windows to stop.
+pause
