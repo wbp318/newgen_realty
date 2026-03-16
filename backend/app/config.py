@@ -1,0 +1,18 @@
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    ANTHROPIC_API_KEY: str = ""
+    DATABASE_URL: str = "sqlite+aiosqlite:///./newgen_realty.db"
+    AI_MODEL: str = "claude-sonnet-4-20250514"
+    DAILY_REQUEST_LIMIT: int = 100  # max AI requests per day
+    MAX_TOKENS_CHAT: int = 1024  # keep chat responses concise
+    MAX_TOKENS_LISTING: int = 1500  # listings need more room
+    MAX_TOKENS_ANALYSIS: int = 2000  # comp analysis needs detail
+    MAX_TOKENS_COMM: int = 512  # emails/texts are short
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
