@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import properties, contacts, ai, activities, conversations
+from app.routers import properties, contacts, ai, activities, conversations, market_data
 
 
 @asynccontextmanager
@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="NewGen Realty AI",
-    description="AI-powered real estate platform for Louisiana",
+    description="AI-powered real estate platform for Louisiana, Arkansas, and Mississippi",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -34,6 +34,7 @@ app.include_router(contacts.router)
 app.include_router(ai.router)
 app.include_router(activities.router)
 app.include_router(conversations.router)
+app.include_router(market_data.router)
 
 
 @app.get("/api/health")

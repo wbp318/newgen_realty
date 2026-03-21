@@ -28,6 +28,7 @@ class PropertyUpdate(BaseModel):
     street_address: Optional[str] = None
     city: Optional[str] = None
     parish: Optional[str] = None
+    state: Optional[str] = None
     zip_code: Optional[str] = None
     property_type: Optional[str] = None
     status: Optional[str] = None

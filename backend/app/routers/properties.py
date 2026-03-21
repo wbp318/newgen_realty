@@ -15,6 +15,7 @@ router = APIRouter(prefix="/api/properties", tags=["properties"])
 @router.get("", response_model=list[PropertyResponse])
 async def list_properties(
     parish: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     property_type: Optional[str] = Query(None),
     min_price: Optional[int] = Query(None),
@@ -27,6 +28,8 @@ async def list_properties(
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Property).order_by(Property.created_at.desc())
+    if state:
+        query = query.where(Property.state == state)
     if parish:
         query = query.where(Property.parish.ilike(f"%{parish}%"))
     if status:

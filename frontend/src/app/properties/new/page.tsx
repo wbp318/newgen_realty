@@ -10,6 +10,7 @@ export default function NewPropertyPage() {
     street_address: "",
     city: "",
     parish: "",
+    state: "LA",
     zip_code: "",
     property_type: "single_family",
     bedrooms: "",
@@ -22,6 +23,8 @@ export default function NewPropertyPage() {
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+
+  const countyParishLabel = form.state === "LA" ? "Parish" : "County";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,14 +60,22 @@ export default function NewPropertyPage() {
           <input value={form.street_address} onChange={(e) => update("street_address", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-900" required />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
             <input value={form.city} onChange={(e) => update("city", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-900" required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parish *</label>
-            <input value={form.parish} onChange={(e) => update("parish", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-900" placeholder="e.g. Orleans" required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{countyParishLabel} *</label>
+            <input value={form.parish} onChange={(e) => update("parish", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-900" placeholder={form.state === "LA" ? "e.g. Orleans" : "e.g. Pulaski"} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+            <select value={form.state} onChange={(e) => update("state", e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-900">
+              <option value="LA">Louisiana</option>
+              <option value="AR">Arkansas</option>
+              <option value="MS">Mississippi</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ZIP *</label>

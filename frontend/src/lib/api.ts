@@ -59,5 +59,14 @@ export const matchProperties = (contactId: string) =>
 export const getDashboardInsights = () =>
   api.get("/api/ai/dashboard-insights");
 export const getAiUsage = () => api.get("/api/ai/usage");
+export const autoCompAnalysis = (propertyId: string, compCount?: number) =>
+  api.post("/api/ai/auto-comp-analysis", { property_id: propertyId, comp_count: compCount || 10 });
+
+// Market Data
+export const getMarketStatus = () => api.get("/api/market/status");
+export const searchMarketComps = (data: Record<string, unknown>) =>
+  api.post("/api/market/comps", data);
+export const lookupProperty = (address: string) =>
+  api.post("/api/market/property", { address });
 
 export default api;

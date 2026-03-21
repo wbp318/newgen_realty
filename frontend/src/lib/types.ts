@@ -94,3 +94,33 @@ export interface DashboardInsights {
   opportunities: string[];
   raw_analysis: string;
 }
+
+// Market Data
+export interface MarketComp {
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  sale_price: number;
+  sqft: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  lot_size_acres: number | null;
+  year_built: number | null;
+  sale_date: string | null;
+  distance_miles: number | null;
+  property_type: string | null;
+}
+
+export interface MarketCompResponse {
+  subject_address: string;
+  comps: MarketComp[];
+  source: string;
+}
+
+export interface CompAnalysisResult {
+  suggested_price: number;
+  price_range_low: number;
+  price_range_high: number;
+  analysis: string;
+}

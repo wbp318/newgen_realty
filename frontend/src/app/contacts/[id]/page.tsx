@@ -184,7 +184,7 @@ export default function ContactDetailPage() {
                   <input type="number" value={String(form.budget_max || "")} onChange={(e) => setForm({ ...form, budget_max: e.target.value ? parseInt(e.target.value) : null })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-xs text-gray-500">Preferred Parishes (comma-separated)</label>
+                  <label className="text-xs text-gray-500">Preferred Parishes/Counties (comma-separated)</label>
                   <input value={(form.preferred_parishes as string[] || []).join(", ")} onChange={(e) => setForm({ ...form, preferred_parishes: e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean) })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" placeholder="e.g. Jefferson, Orleans, St. Tammany" />
                 </div>
                 <div className="col-span-2">
@@ -207,7 +207,7 @@ export default function ContactDetailPage() {
               <div className="grid grid-cols-2 gap-y-3 text-sm">
                 <div><span className="text-gray-500">Budget</span><p className="font-medium text-gray-900">{contact.budget_min || contact.budget_max ? `$${(contact.budget_min || 0).toLocaleString()} - $${(contact.budget_max || 0).toLocaleString()}` : "—"}</p></div>
                 <div><span className="text-gray-500">Source</span><p className="font-medium text-gray-900">{contact.source || "—"}</p></div>
-                <div><span className="text-gray-500">Preferred Parishes</span><p className="font-medium text-gray-900">{contact.preferred_parishes?.join(", ") || "—"}</p></div>
+                <div><span className="text-gray-500">Preferred Parishes/Counties</span><p className="font-medium text-gray-900">{contact.preferred_parishes?.join(", ") || "—"}</p></div>
                 <div><span className="text-gray-500">Preferred Cities</span><p className="font-medium text-gray-900">{contact.preferred_cities?.join(", ") || "—"}</p></div>
                 <div><span className="text-gray-500">Property Types</span><p className="font-medium text-gray-900">{contact.preferred_property_types?.join(", ") || "—"}</p></div>
                 <div><span className="text-gray-500">Last Contact</span><p className="font-medium text-gray-900">{contact.last_contact_date ? new Date(contact.last_contact_date).toLocaleDateString() : "—"}</p></div>
@@ -267,7 +267,7 @@ export default function ContactDetailPage() {
                             {m.property?.street_address || m.property_id}
                           </p>
                           {m.property && (
-                            <p className="text-xs text-gray-500">{m.property.city}, {m.property.parish} Parish</p>
+                            <p className="text-xs text-gray-500">{m.property.city}, {m.property.parish} {m.property.state === "LA" ? "Parish" : "County"}, {m.property.state}</p>
                           )}
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full font-bold ${m.match_score >= 70 ? "bg-emerald-100 text-emerald-700" : m.match_score >= 40 ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}>

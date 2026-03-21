@@ -21,12 +21,15 @@ from app.schemas.ai import (
     ListingRequest, ListingResponse,
     PropertyMatchItem, PropertyMatchRequest, PropertyMatchResponse,
 )
+from app.schemas.ai import CompData
+from app.schemas.market_data import AutoCompAnalysisRequest
 from app.services.ai_assistant import assistant
 from app.services.comm_drafter import draft_communication
 from app.services.comp_analyzer import analyze_comps
 from app.services.lead_scorer import score_lead
 from app.services.listing_generator import generate_listing
 from app.services.property_matcher import match_properties
+from app.services import market_data
 from app.prompts.system_prompts import DASHBOARD_INSIGHTS_SYSTEM
 from app.prompts.templates import DASHBOARD_INSIGHTS_TEMPLATE
 from app.config import settings
@@ -238,8 +241,12 @@ async def ai_dashboard_insights(db: AsyncSession = Depends(get_db)):
     portfolio_value = sum(p.asking_price or 0 for p in active_props)
     leads = [c for c in contacts if c.contact_type in ("lead", "buyer")]
 
-    # Properties by parish
-    parish_counts = Counter(p.parish for p in properties)
+    # Properties by state
+    state_counts = Counter(p.state or "LA" for p in properties)
+    properties_by_state = "\n".join(f"- {state}: {count}" for state, count in state_counts.most_common()) or "None"
+
+    # Properties by parish/county
+    parish_counts = Counter(f"{p.parish} ({p.state or 'LA'})" for p in properties)
     properties_by_parish = "\n".join(f"- {parish}: {count}" for parish, count in parish_counts.most_common())
 
     # Properties by status
@@ -273,6 +280,7 @@ async def ai_dashboard_insights(db: AsyncSession = Depends(get_db)):
         num_contacts=len(contacts),
         num_leads=len(leads),
         portfolio_value=portfolio_value,
+        properties_by_state=properties_by_state,
         properties_by_parish=properties_by_parish or "None",
         properties_by_status=properties_by_status or "None",
         price_distribution=price_distribution,
@@ -308,6 +316,85 @@ def _parse_section(text: str, section: str) -> list[str]:
         return []
     items = re.findall(r"- (.+)", match.group(1))
     return [item.strip() for item in items if item.strip()]
+
+
+@router.post("/auto-comp-analysis", response_model=CompAnalysisResponse)
+async def auto_comp_analysis(request: AutoCompAnalysisRequest, db: AsyncSession = Depends(get_db)):
+    """Fetch real market comps for a property, then run AI comp analysis."""
+    # Fetch the property
+    result = await db.execute(select(Property).where(Property.id == request.property_id))
+    prop = result.scalar_one_or_none()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    if not market_data.is_configured():
+        raise HTTPException(status_code=503, detail="Market data API not configured. Set REALTY_MOLE_API_KEY in .env")
+
+    # Build full address for API lookup
+    state_label = prop.state or "LA"
+    full_address = f"{prop.street_address}, {prop.city}, {state_label} {prop.zip_code}"
+
+    # Fetch comps from market data API (sync — runs in threadpool)
+    try:
+        market_result = market_data.search_comps(
+            address=full_address,
+            sqft=prop.sqft,
+            bedrooms=prop.bedrooms,
+            bathrooms=prop.bathrooms,
+            comp_count=request.comp_count,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Market data API error: {e}")
+
+    if not market_result.comps:
+        raise HTTPException(status_code=404, detail="No comparable sales found for this address")
+
+    # Convert market comps to CompData for AI analysis
+    comp_data = [
+        CompData(
+            address=c.address,
+            sale_price=c.sale_price,
+            sqft=c.sqft,
+            bedrooms=c.bedrooms,
+            bathrooms=c.bathrooms,
+            sale_date=c.sale_date,
+            notes=f"Distance: {c.distance_miles:.1f}mi, Type: {c.property_type}" if c.distance_miles else None,
+        )
+        for c in market_result.comps
+        if c.sale_price > 0
+    ]
+
+    if not comp_data:
+        raise HTTPException(status_code=404, detail="No comps with sale prices found")
+
+    # Run AI analysis (sync)
+    analysis_request = CompAnalysisRequest(
+        subject_address=full_address,
+        subject_sqft=prop.sqft,
+        subject_bedrooms=prop.bedrooms,
+        subject_bathrooms=prop.bathrooms,
+        subject_lot_acres=prop.lot_size_acres,
+        subject_year_built=prop.year_built,
+        subject_features=prop.features,
+        comps=comp_data,
+    )
+    analysis_result = analyze_comps(analysis_request)
+
+    # Save AI suggested price to property
+    prop.ai_suggested_price = analysis_result.suggested_price
+    await db.commit()
+
+    # Log activity
+    activity = Activity(
+        activity_type="ai_action",
+        title=f"AI Comp Analysis: ${analysis_result.suggested_price:,} suggested",
+        description=f"Analyzed {len(comp_data)} market comps. Range: ${analysis_result.price_range_low:,} - ${analysis_result.price_range_high:,}",
+        property_id=request.property_id,
+    )
+    db.add(activity)
+    await db.commit()
+
+    return analysis_result
 
 
 @router.get("/usage")

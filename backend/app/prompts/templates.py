@@ -1,6 +1,6 @@
-LISTING_DESCRIPTION_TEMPLATE = """Generate a compelling MLS listing description for this Louisiana property:
+LISTING_DESCRIPTION_TEMPLATE = """Generate a compelling MLS listing description for this property:
 
-**Address:** {street_address}, {city}, {parish} Parish, LA
+**Address:** {street_address}, {city}, {county_parish_label}: {county_parish}, {state}
 **Property Type:** {property_type}
 **Bedrooms:** {bedrooms}
 **Bathrooms:** {bathrooms}
@@ -51,7 +51,7 @@ PRICE_RANGE_HIGH: [integer]
 ANALYSIS: [your detailed analysis]
 """
 
-COMM_DRAFT_TEMPLATE = """Draft a {medium} for a Louisiana real estate agent.
+COMM_DRAFT_TEMPLATE = """Draft a {medium} for a real estate agent.
 
 **Recipient:** {recipient_name}
 **Purpose:** {purpose}
@@ -72,7 +72,7 @@ LEAD_SCORING_TEMPLATE = """Score this real estate lead from 0-100 based on their
 - **Name:** {contact_name}
 - **Type:** {contact_type}
 - **Budget:** {budget_min} - {budget_max}
-- **Preferred Parishes:** {preferred_parishes}
+- **Preferred Parishes/Counties:** {preferred_parishes}
 - **Preferred Property Types:** {preferred_property_types}
 - **Preferred Cities:** {preferred_cities}
 - **Source:** {source}
@@ -99,7 +99,7 @@ PROPERTY_MATCHING_TEMPLATE = """Match this contact to the best available propert
 - **Name:** {contact_name}
 - **Type:** {contact_type}
 - **Budget:** {budget_min} - {budget_max}
-- **Preferred Parishes:** {preferred_parishes}
+- **Preferred Parishes/Counties:** {preferred_parishes}
 - **Preferred Property Types:** {preferred_property_types}
 - **Preferred Cities:** {preferred_cities}
 - **Notes:** {notes}
@@ -122,7 +122,10 @@ DASHBOARD_INSIGHTS_TEMPLATE = """Analyze this real estate portfolio and generate
 - Active leads: {num_leads}
 - Total portfolio value: ${portfolio_value:,}
 
-## Properties by Parish
+## Properties by State
+{properties_by_state}
+
+## Properties by Parish/County
 {properties_by_parish}
 
 ## Properties by Status
@@ -137,5 +140,5 @@ DASHBOARD_INSIGHTS_TEMPLATE = """Analyze this real estate portfolio and generate
 ## Contact Preferences
 {contact_preferences}
 
-Analyze this data and provide specific, actionable insights. Reference actual parishes, price ranges, and patterns.
+Analyze this data and provide specific, actionable insights. Reference actual parishes/counties, states, price ranges, and patterns.
 """

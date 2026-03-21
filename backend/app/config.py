@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     MAX_TOKENS_LISTING: int = 1500  # listings need more room
     MAX_TOKENS_ANALYSIS: int = 2000  # comp analysis needs detail
     MAX_TOKENS_COMM: int = 512  # emails/texts are short
+    # Market data (Realty Mole via RapidAPI)
+    REALTY_MOLE_API_KEY: str = ""
+    SUPPORTED_STATES: list[str] = ["LA", "AR", "MS"]
 
     class Config:
         env_file = ".env"

@@ -8,7 +8,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import FilterBar, { type FilterConfig } from "@/components/ui/FilterBar";
 
 const propertyFilters: FilterConfig[] = [
-  { key: "q", label: "Search", type: "text", placeholder: "Address, city, parish..." },
+  { key: "q", label: "Search", type: "text", placeholder: "Address, city, parish/county..." },
   {
     key: "status", label: "Status", type: "select",
     options: [
@@ -30,9 +30,21 @@ const propertyFilters: FilterConfig[] = [
       { value: "commercial", label: "Commercial" },
     ],
   },
-  { key: "parish", label: "Parish", type: "text", placeholder: "e.g. Jefferson" },
+  {
+    key: "state", label: "State", type: "select",
+    options: [
+      { value: "LA", label: "Louisiana" },
+      { value: "AR", label: "Arkansas" },
+      { value: "MS", label: "Mississippi" },
+    ],
+  },
+  { key: "parish", label: "Parish/County", type: "text", placeholder: "e.g. Jefferson" },
   { key: "bedrooms", label: "Min Beds", type: "text", placeholder: "e.g. 3" },
 ];
+
+function countyParishLabel(state: string): string {
+  return state === "LA" ? "Parish" : "County";
+}
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -90,7 +102,9 @@ export default function PropertiesPage() {
                   </button>
                 </div>
                 <h3 className="font-semibold text-gray-900">{prop.street_address}</h3>
-                <p className="text-sm text-gray-500">{prop.city}, {prop.parish} Parish, LA {prop.zip_code}</p>
+                <p className="text-sm text-gray-500">
+                  {prop.city}, {prop.parish} {countyParishLabel(prop.state)}, {prop.state} {prop.zip_code}
+                </p>
                 <div className="mt-3 flex gap-4 text-sm text-gray-600">
                   {prop.bedrooms && <span>{prop.bedrooms} bd</span>}
                   {prop.bathrooms && <span>{prop.bathrooms} ba</span>}

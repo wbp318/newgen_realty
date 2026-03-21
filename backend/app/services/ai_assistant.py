@@ -4,7 +4,7 @@ import anthropic
 from fastapi import HTTPException
 
 from app.config import settings
-from app.prompts.system_prompts import LOUISIANA_AGENT_SYSTEM_PROMPT
+from app.prompts.system_prompts import AGENT_SYSTEM_PROMPT
 
 
 class UsageTracker:
@@ -65,7 +65,7 @@ class AIAssistant:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=max_tokens or settings.MAX_TOKENS_CHAT,
-            system=system or LOUISIANA_AGENT_SYSTEM_PROMPT,
+            system=system or AGENT_SYSTEM_PROMPT,
             messages=messages,
         )
         self.usage.record_tokens(response.usage.input_tokens, response.usage.output_tokens)

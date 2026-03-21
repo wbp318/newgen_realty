@@ -8,10 +8,15 @@ from app.services.ai_assistant import assistant
 
 
 def generate_listing(data: ListingRequest) -> ListingResponse:
+    state = getattr(data, "state", "LA") or "LA"
+    county_parish_label = "Parish" if state == "LA" else "County"
+
     prompt = LISTING_DESCRIPTION_TEMPLATE.format(
         street_address=data.street_address,
         city=data.city,
-        parish=data.parish,
+        county_parish_label=county_parish_label,
+        county_parish=data.parish,
+        state=state,
         property_type=data.property_type,
         bedrooms=data.bedrooms or "N/A",
         bathrooms=data.bathrooms or "N/A",

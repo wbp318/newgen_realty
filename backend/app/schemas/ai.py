@@ -22,6 +22,7 @@ class ListingRequest(BaseModel):
     street_address: str
     city: str
     parish: str
+    state: str = "LA"
     property_type: str
     bedrooms: Optional[int] = None
     bathrooms: Optional[float] = None
