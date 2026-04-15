@@ -43,7 +43,7 @@ router = APIRouter(prefix="/api/ai", tags=["ai"])
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     messages = [{"role": m.role, "content": m.content} for m in request.messages]
-    response = assistant.chat(messages)
+    response = assistant.chat(messages, model=settings.AI_MODEL_FAST)
 
     # Persist conversation
     conversation_id = request.conversation_id
@@ -401,6 +401,7 @@ async def ai_dashboard_insights(db: AsyncSession = Depends(get_db)):
         [{"role": "user", "content": prompt}],
         system=DASHBOARD_INSIGHTS_SYSTEM,
         max_tokens=settings.MAX_TOKENS_ANALYSIS,
+        model=settings.AI_MODEL_FAST,
     )
 
     # Parse response

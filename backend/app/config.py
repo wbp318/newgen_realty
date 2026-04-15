@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     DATABASE_URL: str = "sqlite+aiosqlite:///./newgen_realty.db"
     AI_MODEL: str = "claude-sonnet-4-20250514"
+    AI_MODEL_FAST: str = "claude-haiku-4-5-20251001"
     DAILY_REQUEST_LIMIT: int = 100  # max AI requests per day
     MAX_TOKENS_CHAT: int = 1024  # keep chat responses concise
     MAX_TOKENS_LISTING: int = 1500  # listings need more room

@@ -5,7 +5,7 @@ import { aiChat, generateListing, draftCommunication, getConversations, deleteCo
 import type { ChatMessage, Conversation } from "@/lib/types";
 
 const quickActions = [
-  { id: "chat", label: "General Chat", desc: "Ask anything about LA real estate" },
+  { id: "chat", label: "General Chat", desc: "Ask anything about LA, AR, or MS real estate" },
   { id: "listing", label: "Generate Listing", desc: "Create a property description" },
   { id: "comm", label: "Draft Message", desc: "Write an email or text" },
 ];

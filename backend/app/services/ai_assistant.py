@@ -36,8 +36,8 @@ class UsageTracker:
     def get_stats(self) -> dict:
         if date.today() != self.date:
             self.reset()
-        # Sonnet 4.6: $3/M input, $15/M output
-        est_cost = (self.input_tokens * 3 + self.output_tokens * 15) / 1_000_000
+        # Blended estimate (mix of Haiku $0.80/$4 and Sonnet $3/$15)
+        est_cost = (self.input_tokens * 2 + self.output_tokens * 10) / 1_000_000
         return {
             "date": str(self.date),
             "requests_today": self.request_count,
@@ -60,10 +60,16 @@ class AIAssistant:
             self._client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         return self._client
 
-    def chat(self, messages: list[dict], system: str | None = None, max_tokens: int | None = None) -> str:
+    def chat(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        max_tokens: int | None = None,
+        model: str | None = None,
+    ) -> str:
         self.usage.check_and_increment()
         response = self.client.messages.create(
-            model=self.model,
+            model=model or self.model,
             max_tokens=max_tokens or settings.MAX_TOKENS_CHAT,
             system=system or AGENT_SYSTEM_PROMPT,
             messages=messages,
