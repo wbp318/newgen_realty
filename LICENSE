@@ -23,6 +23,10 @@ This Software is protected under:
   - The Louisiana Uniform Trade Secrets Act (LUTSA), La. R.S. 51:1431-1439
   - The Louisiana Database Protection provisions, La. R.S. 51:1951-1955
   - The Louisiana Computer-Related Crime Law, La. R.S. 14:73.1-73.10
+  - The Arkansas Trade Secrets Act, Ark. Code Ann. § 4-75-601 et seq.
+  - The Arkansas Deceptive Trade Practices Act, Ark. Code Ann. § 4-88-101 et seq.
+  - The Mississippi Uniform Trade Secrets Act, Miss. Code Ann. § 75-26-1 et seq.
+  - The Mississippi Computer Crimes Act, Miss. Code Ann. § 97-45-1 et seq.
   - The Lanham Act, 15 U.S.C. § 1051 et seq. (trademarks)
 
 2. GRANT OF LICENSE
@@ -56,8 +60,10 @@ may:
 The Software contains trade secrets and confidential proprietary information
 belonging to the Owners. The Software's source code, algorithms, data models,
 AI prompts, system architecture, and business logic constitute trade secrets
-under the Louisiana Uniform Trade Secrets Act, La. R.S. 51:1431(4), and the
-Defend Trade Secrets Act, 18 U.S.C. § 1839(3). Unauthorized disclosure,
+under the Louisiana Uniform Trade Secrets Act, La. R.S. 51:1431(4), the
+Arkansas Trade Secrets Act, Ark. Code Ann. § 4-75-601, the Mississippi
+Uniform Trade Secrets Act, Miss. Code Ann. § 75-26-3, and the Defend Trade
+Secrets Act, 18 U.S.C. § 1839(3). Unauthorized disclosure,
 misappropriation, or use of these trade secrets is strictly prohibited and
 subject to civil and criminal liability.
 
@@ -81,13 +87,16 @@ constitutes:
   (c) A violation of the Computer Fraud and Abuse Act, 18 U.S.C. § 1030,
       subject to criminal penalties and civil liability;
   (d) Misappropriation of trade secrets under the DTSA, 18 U.S.C. § 1836,
-      and LUTSA, La. R.S. 51:1433, entitling the Owners to injunctive relief,
-      actual damages, unjust enrichment, exemplary damages up to twice the
-      amount of actual damages for willful misappropriation, and attorneys'
-      fees;
+      LUTSA, La. R.S. 51:1433, the Arkansas Trade Secrets Act, Ark. Code
+      Ann. § 4-75-606, and the Mississippi Uniform Trade Secrets Act, Miss.
+      Code Ann. § 75-26-5, entitling the Owners to injunctive relief, actual
+      damages, unjust enrichment, exemplary damages up to twice the amount
+      of actual damages for willful misappropriation, and attorneys' fees;
   (e) A violation of the Louisiana Computer-Related Crime Law, La. R.S.
-      14:73.5, subject to criminal fines up to $10,000 and imprisonment for
-      up to five years.
+      14:73.5, the Arkansas Computer Crimes Act, Ark. Code Ann. § 5-41-101
+      et seq., and/or the Mississippi Computer Crimes Act, Miss. Code Ann.
+      § 97-45-3, subject to criminal fines and imprisonment as prescribed
+      by the applicable state statute.
 
 The Owners reserve the right to pursue all available legal remedies, including
 injunctive relief, compensatory damages, statutory damages, punitive damages,
@@ -98,7 +107,10 @@ disgorgement of profits, and recovery of attorneys' fees and costs.
 This License shall be governed by and construed in accordance with the laws of
 the State of Louisiana, without regard to its conflict of laws principles. The
 Louisiana Civil Code, La. C.C. Art. 1906 et seq. (Conventional Obligations),
-shall govern the interpretation and enforcement of this License.
+shall govern the interpretation and enforcement of this License. To the extent
+the Software operates in or relates to activities in Arkansas or Mississippi,
+the applicable trade secret, computer crime, and intellectual property laws of
+those states shall also apply as set forth in Sections 1 and 6.
 
 Any dispute arising under this License shall be subject to the exclusive
 jurisdiction of the state and federal courts located in the State of Louisiana.
