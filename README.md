@@ -53,10 +53,19 @@ pip install -r requirements.txt
 copy .env.example .env
 notepad .env
 ```
-In notepad: replace `sk-ant-your-key-here` with your real Anthropic API key. Change the DATABASE_URL line to:
+In notepad, make the file look exactly like this (replace the API key with yours):
 ```
+ANTHROPIC_API_KEY=sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXXX
 DATABASE_URL=sqlite+aiosqlite:///./newgen_realty.db
+REALTY_MOLE_API_KEY=
+ATTOM_API_KEY=
+SKIP_TRACE_PROVIDER=free
+SKIP_TRACE_API_KEY=
 ```
+- The `ANTHROPIC_API_KEY` line is the only one you MUST fill in — paste your full key after the `=` sign (no spaces, no quotes)
+- The `DATABASE_URL` line MUST be changed from the template — the template has a PostgreSQL URL that won't work without Docker
+- Leave the other keys blank for now — they're optional and unlock extra features later
+
 Save and close notepad.
 
 ```bash
