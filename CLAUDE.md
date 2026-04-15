@@ -47,15 +47,27 @@ Endpoints are `async def` and use `AsyncSession` for all database queries (`awai
 Router (async) → gathers data from DB → calls sync service function → service calls assistant.chat() → parses response with regex → returns dict → router saves results to DB
 ```
 
-The `AIAssistant` singleton in `services/ai_assistant.py` wraps the Anthropic client with lazy init, rate limiting (`UsageTracker`), and cost tracking. All other services (`listing_generator.py`, `comp_analyzer.py`, `comm_drafter.py`, `lead_scorer.py`, `property_matcher.py`) call `assistant.chat()` with specialized system prompts from `prompts/`, then parse structured sections (e.g., `HEADLINE:`, `SCORE:`, `MATCH:`) from the response text using regex.
+The `AIAssistant` singleton in `services/ai_assistant.py` wraps the Anthropic client with lazy init, rate limiting (`UsageTracker`), and cost tracking. All other services (`listing_generator.py`, `comp_analyzer.py`, `comm_drafter.py`, `lead_scorer.py`, `property_matcher.py`, `prospect_scorer.py`, `outreach_generator.py`) call `assistant.chat()` with specialized system prompts from `prompts/`, then parse structured sections (e.g., `HEADLINE:`, `SCORE:`, `MATCH:`) from the response text using regex.
 
 ### Market Data Integration
 
 `services/market_data.py` integrates with the Realty Mole Property API (via RapidAPI) for real comparable sales data. The `auto-comp-analysis` AI endpoint fetches market comps then feeds them into the AI comp analyzer. Market data functions are **sync** (same pattern as AI services). Falls back gracefully when `REALTY_MOLE_API_KEY` is not set.
 
+### Prospecting Engine
+
+`services/prospect_data.py` integrates with the ATTOM Data API for public property records. Searches for absentee owners, pre-foreclosures, tax delinquent, long-term owners, and vacant properties. Same sync pattern as `market_data.py` — sync httpx functions with `is_configured()` graceful fallback. The `_parse_prospect()` function normalizes ATTOM responses into the Prospect model format.
+
+`services/prospect_scorer.py` — AI scores prospects 0-100 based on motivation signals (type 40%, equity 20%, timing 15%, condition 15%, data completeness 10%). Follows the `lead_scorer.py` pattern exactly.
+
+`services/outreach_generator.py` — AI generates personalized outreach (email/letter/text) with tone adapted per prospect type. `PROSPECT_TYPE_CONTEXT` dict provides situation-specific guidance. Follows the `comm_drafter.py` pattern.
+
+`services/compliance.py` — TCPA compliance enforcement: `check_contact_hours()` (8am-9pm in recipient timezone), `validate_outreach_compliance()` (consent, DNC, opt-out checks), `process_opt_out()` (10 business day window), `can_contact_via_medium()` (medium-specific rules).
+
 ### Database
 
-Async SQLAlchemy 2.0. Engine created in `database.py`, sessions via `get_db()` dependency. Tables auto-created on startup via lifespan handler in `main.py`. Models: Property, Contact, Activity, Conversation — all use UUID string primary keys.
+Async SQLAlchemy 2.0. Engine created in `database.py`, sessions via `get_db()` dependency. Tables auto-created on startup via lifespan handler in `main.py`. Models: Property, Contact, Activity, Conversation, Prospect, ProspectList, OutreachCampaign, OutreachMessage — all use UUID string primary keys.
+
+**Prospect** is separate from Contact — it represents a cold lead from public records. Prospects convert to Contacts via the `/convert` endpoint when qualified. Prospect has `motivation_signals` and `property_data` JSON columns for flexible data across different lead types, plus TCPA compliance fields (consent_status, dnc_checked, dnc_listed, opt_out_date).
 
 ### Frontend
 
@@ -75,4 +87,4 @@ Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/a
 
 ## Environment Variables
 
-Required: `ANTHROPIC_API_KEY`. Optional: `REALTY_MOLE_API_KEY` (for market data/comps — get from RapidAPI). See `backend/.env.example`. Default DB is `sqlite+aiosqlite:///./newgen.db`; docker-compose overrides to PostgreSQL (`asyncpg`). AI model configured via `AI_MODEL` setting (default: `claude-sonnet-4-20250514`). `SUPPORTED_STATES` defaults to `["LA", "AR", "MS"]`.
+Required: `ANTHROPIC_API_KEY`. Optional: `REALTY_MOLE_API_KEY` (for market data/comps — get from RapidAPI), `ATTOM_API_KEY` (for prospecting engine — get from attomdata.com). See `backend/.env.example`. Default DB is `sqlite+aiosqlite:///./newgen_realty.db`; docker-compose overrides to PostgreSQL (`asyncpg`). AI model configured via `AI_MODEL` setting (default: `claude-sonnet-4-20250514`). `SUPPORTED_STATES` defaults to `["LA", "AR", "MS"]`.

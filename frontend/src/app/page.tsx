@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getProperties, getContacts, getActivities, getDashboardInsights } from "@/lib/api";
-import type { Property, Contact, Activity, DashboardInsights } from "@/lib/types";
+import { getProperties, getContacts, getActivities, getDashboardInsights, getProspects, getOutreachCampaigns } from "@/lib/api";
+import type { Property, Contact, Activity, DashboardInsights, Prospect, OutreachCampaign } from "@/lib/types";
 import LeadScoreBadge from "@/components/ui/LeadScoreBadge";
 
 export default function Dashboard() {
@@ -18,9 +18,13 @@ export default function Dashboard() {
   const [hotLeads, setHotLeads] = useState<Contact[]>([]);
   const [insights, setInsights] = useState<DashboardInsights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [prospectStats, setProspectStats] = useState<Record<string, number>>({});
+  const [topProspects, setTopProspects] = useState<Prospect[]>([]);
+  const [activeCampaigns, setActiveCampaigns] = useState<OutreachCampaign[]>([]);
 
   useEffect(() => {
     loadDashboard();
+    loadProspectData();
   }, []);
 
   async function loadDashboard() {
@@ -54,6 +58,35 @@ export default function Dashboard() {
     }
   }
 
+  async function loadProspectData() {
+    try {
+      const [prospectsRes, campaignsRes] = await Promise.all([
+        getProspects({ limit: 200 }),
+        getOutreachCampaigns(),
+      ]);
+      const prospects: Prospect[] = prospectsRes.data;
+      const campaigns: OutreachCampaign[] = campaignsRes.data;
+
+      // Pipeline stats
+      const pipeline: Record<string, number> = {};
+      for (const p of prospects) {
+        pipeline[p.status] = (pipeline[p.status] || 0) + 1;
+      }
+      setProspectStats(pipeline);
+
+      // Top 5 uncontacted prospects by score
+      const uncontacted = prospects
+        .filter((p) => p.ai_prospect_score !== null && p.status !== "contacted" && p.status !== "converted" && p.status !== "do_not_contact")
+        .sort((a, b) => (b.ai_prospect_score || 0) - (a.ai_prospect_score || 0));
+      setTopProspects(uncontacted.slice(0, 5));
+
+      // Active campaigns
+      setActiveCampaigns(campaigns.filter((c) => c.status === "active" || c.status === "draft"));
+    } catch {
+      // Prospects may not be loaded yet
+    }
+  }
+
   async function handleGetInsights() {
     setLoadingInsights(true);
     try {
@@ -81,7 +114,7 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-      <p className="text-gray-500 mb-8">Welcome to NewGen Realty AI</p>
+      <p className="text-gray-500 mb-8">AI-powered prospecting, CRM, and outreach for LA, AR, and MS</p>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
@@ -152,9 +185,109 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Two Column: Hot Leads + Recent Activity */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Hot Leads */}
+      {/* Prospect Pipeline */}
+      {Object.keys(prospectStats).length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-blue-100">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Prospect Pipeline</h2>
+            <Link href="/prospects" className="text-sm text-emerald-600 hover:underline">View all</Link>
+          </div>
+          <div className="flex gap-2">
+            {[
+              { key: "new", label: "New", color: "bg-blue-500" },
+              { key: "researching", label: "Researching", color: "bg-purple-500" },
+              { key: "qualified", label: "Qualified", color: "bg-amber-500" },
+              { key: "contacted", label: "Contacted", color: "bg-emerald-500" },
+              { key: "responding", label: "Responding", color: "bg-green-500" },
+              { key: "converted", label: "Converted", color: "bg-teal-500" },
+            ].map((stage) => {
+              const count = prospectStats[stage.key] || 0;
+              const total = Object.values(prospectStats).reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((count / total) * 100) : 0;
+              return (
+                <div key={stage.key} className="flex-1 text-center">
+                  <div className="text-lg font-bold text-gray-900">{count}</div>
+                  <div className="text-xs text-gray-500 mb-1">{stage.label}</div>
+                  <div className="bg-gray-100 rounded-full h-2">
+                    <div className={`${stage.color} h-2 rounded-full`} style={{ width: `${Math.max(pct, count > 0 ? 10 : 0)}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Three Column: Top Prospects + Active Campaigns + Hot Leads */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Top Prospects */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Top Prospects</h2>
+            <Link href="/prospects/search" className="text-xs text-emerald-600 hover:underline">Search</Link>
+          </div>
+          {topProspects.length > 0 ? (
+            <div className="space-y-3">
+              {topProspects.map((p) => (
+                <Link key={p.id} href={`/prospects/${p.id}`} className="flex items-center justify-between hover:bg-gray-50 rounded-lg p-2 -mx-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">
+                      {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown"}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">{p.property_address}</p>
+                  </div>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ml-2 ${
+                    (p.ai_prospect_score || 0) >= 85 ? "bg-red-100 text-red-700" :
+                    (p.ai_prospect_score || 0) >= 70 ? "bg-orange-100 text-orange-700" :
+                    "bg-yellow-100 text-yellow-700"
+                  }`}>
+                    {Math.round(p.ai_prospect_score || 0)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">Score prospects to see them here.</p>
+          )}
+        </div>
+
+        {/* Active Campaigns */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Campaigns</h2>
+            <Link href="/outreach" className="text-xs text-emerald-600 hover:underline">View all</Link>
+          </div>
+          {activeCampaigns.length > 0 ? (
+            <div className="space-y-3">
+              {activeCampaigns.map((c) => (
+                <Link key={c.id} href={`/outreach/${c.id}`} className="block hover:bg-gray-50 rounded-lg p-2 -mx-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-medium text-gray-900 text-sm truncate">{c.name}</p>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${c.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"}`}>
+                      {c.status}
+                    </span>
+                  </div>
+                  <div className="flex gap-3 text-xs text-gray-500">
+                    <span>{c.total_messages} msgs</span>
+                    <span>{c.sent_count} sent</span>
+                    {c.replied_count > 0 && <span className="text-emerald-600">{c.replied_count} replies</span>}
+                  </div>
+                  {c.total_messages > 0 && (
+                    <div className="mt-1 bg-gray-100 rounded-full h-1">
+                      <div className="bg-emerald-500 h-1 rounded-full" style={{ width: `${Math.min((c.sent_count / c.total_messages) * 100, 100)}%` }} />
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">
+              <Link href="/outreach" className="text-emerald-600 hover:underline">Create a campaign</Link> to start outreach.
+            </p>
+          )}
+        </div>
+
+        {/* Hot Leads (moved from two-column) */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Hot Leads</h2>
           {hotLeads.length > 0 ? (
@@ -176,8 +309,10 @@ export default function Dashboard() {
             <p className="text-gray-400 text-sm">No hot leads yet. Score your contacts to see them here.</p>
           )}
         </div>
+      </div>
 
-        {/* Recent Activity */}
+      {/* Recent Activity */}
+      <div className="mb-6">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
           {recentActivity.length > 0 ? (
@@ -201,12 +336,16 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Link href="/prospects/search" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-blue-100 hover:border-blue-300">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Find Prospects</h2>
+          <p className="text-gray-500">Search ATTOM public records for motivated sellers — absentee owners, pre-foreclosures, tax delinquent, and more.</p>
+        </Link>
         <Link href="/ai" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-emerald-100 hover:border-emerald-300">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">AI Assistant</h2>
-          <p className="text-gray-500">Chat with your AI real estate assistant. Generate listings, analyze comps, draft communications, and get Louisiana-specific advice.</p>
+          <p className="text-gray-500">Chat with your AI real estate assistant. Generate listings, analyze comps, and draft communications.</p>
         </Link>
-        <Link href="/properties/new" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-blue-100 hover:border-blue-300">
+        <Link href="/properties/new" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-purple-100 hover:border-purple-300">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Add Property</h2>
           <p className="text-gray-500">Enter a new property listing. The AI will help generate descriptions and suggest pricing.</p>
         </Link>
