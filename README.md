@@ -43,10 +43,11 @@ git --version       # Should show 2.x+
 
 You can add any of these later — the platform works without them, you just won't have access to those specific features.
 
-**Step 1 — Download the code.** Open a regular (non-admin) terminal. First, navigate to your Documents folder so the project goes somewhere you can find it:
-```bash
-cd %USERPROFILE%\Documents
+**Step 1 — Download the code.** Open **Command Prompt** (search "cmd" in the Start menu — NOT PowerShell). Navigate to your Documents folder:
+```cmd
+cd C:\Users\%USERNAME%\Documents
 ```
+> **Not sure of your username?** Type `echo %USERNAME%` and it'll show you. Or just open File Explorer, go to Documents, and look at the path bar at the top.
 Now download the project:
 ```bash
 git clone https://github.com/wbp318/newgen_realty.git
@@ -101,9 +102,9 @@ INFO:     Application startup complete.
 ```
 That means the backend is running. **Do NOT close this terminal — leave it running.**
 
-**Step 5 — Open a NEW terminal window** (right-click your taskbar terminal icon → "New Window", or press Ctrl+Shift+N). In this new terminal, navigate to the frontend folder:
-```bash
-cd %USERPROFILE%\Documents\newgen_realty\frontend
+**Step 5 — Open a NEW Command Prompt window** (search "cmd" in Start menu again). In this new window, navigate to the frontend folder:
+```cmd
+cd C:\Users\%USERNAME%\Documents\newgen_realty\frontend
 npm install
 ```
 This installs the frontend dependencies (takes 30-60 seconds). When it's done, run:
