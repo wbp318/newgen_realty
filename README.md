@@ -2,9 +2,31 @@
 
 ## Quickstart — Windows (Get Running in 2 Minutes)
 
-You need: **Python 3.12+**, **Node.js 18+**, and an **Anthropic API key**.
+**Step 0 — Install prerequisites (open PowerShell as Administrator):**
 
-**Step 0 — Get your Anthropic API key (free to start):**
+If you don't have Python, Node, and Git installed, run these one-liners in PowerShell:
+
+```powershell
+# Install Git (if you don't have it)
+winget install Git.Git
+
+# Install Python 3.12+
+winget install Python.Python.3.12
+
+# Install Node.js 18+
+winget install OpenJS.NodeJS.LTS
+```
+
+Close and reopen PowerShell after installing, then verify:
+```powershell
+python --version    # Should show 3.12+
+node --version      # Should show 18+
+git --version       # Should show 2.x+
+```
+
+> **Already have these?** Skip to Step 0b.
+
+**Step 0b — Get your Anthropic API key (free to start):**
 1. Go to [console.anthropic.com](https://console.anthropic.com/) and create an account
 2. Add a payment method (you only pay for what you use — testing costs pennies)
 3. Click **API Keys** in the left sidebar
