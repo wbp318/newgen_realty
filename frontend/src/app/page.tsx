@@ -228,23 +228,55 @@ export default function Dashboard() {
           </div>
           {topProspects.length > 0 ? (
             <div className="space-y-3">
-              {topProspects.map((p) => (
-                <Link key={p.id} href={`/prospects/${p.id}`} className="flex items-center justify-between hover:bg-gray-50 rounded-lg p-2 -mx-2">
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">
-                      {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown"}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">{p.property_address}</p>
-                  </div>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ml-2 ${
-                    (p.ai_prospect_score || 0) >= 85 ? "bg-red-100 text-red-700" :
-                    (p.ai_prospect_score || 0) >= 70 ? "bg-orange-100 text-orange-700" :
-                    "bg-yellow-100 text-yellow-700"
-                  }`}>
-                    {Math.round(p.ai_prospect_score || 0)}
-                  </span>
-                </Link>
-              ))}
+              {topProspects.map((p) => {
+                const typeLabels: Record<string, string> = {
+                  absentee_owner: "Absentee", pre_foreclosure: "Pre-Foreclosure", probate: "Probate",
+                  long_term_owner: "Long-Term", vacant: "Vacant", tax_delinquent: "Tax Delinquent",
+                  fsbo: "FSBO", expired_listing: "Expired",
+                };
+                const typeColors: Record<string, string> = {
+                  absentee_owner: "bg-purple-100 text-purple-700", pre_foreclosure: "bg-red-100 text-red-700",
+                  probate: "bg-amber-100 text-amber-700", long_term_owner: "bg-blue-100 text-blue-700",
+                  vacant: "bg-yellow-100 text-yellow-700", tax_delinquent: "bg-orange-100 text-orange-700",
+                  fsbo: "bg-emerald-100 text-emerald-700", expired_listing: "bg-gray-200 text-gray-700",
+                };
+                const score = p.ai_prospect_score || 0;
+                const scoreLabel = score >= 85 ? "Highly Motivated" : score >= 70 ? "Strong" : score >= 50 ? "Moderate" : "Low";
+                const scoreColor = score >= 85 ? "bg-red-100 text-red-700" : score >= 70 ? "bg-orange-100 text-orange-700" : score >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700";
+                return (
+                  <Link key={p.id} href={`/prospects/${p.id}`} className="block hover:bg-gray-50 rounded-lg p-2 -mx-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-gray-900 text-sm truncate">
+                        {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown"}
+                      </p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ml-2 ${scoreColor}`}>
+                        {Math.round(score)} {scoreLabel}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${typeColors[p.prospect_type] || "bg-gray-100 text-gray-600"}`}>
+                        {typeLabels[p.prospect_type] || p.prospect_type}
+                      </span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                        p.prospect_type === "pre_foreclosure" ? "bg-red-50 text-red-600" :
+                        p.prospect_type === "probate" ? "bg-amber-50 text-amber-600" :
+                        p.prospect_type === "absentee_owner" ? "bg-purple-50 text-purple-600" :
+                        p.prospect_type === "long_term_owner" ? "bg-blue-50 text-blue-600" :
+                        p.prospect_type === "tax_delinquent" ? "bg-orange-50 text-orange-600" :
+                        p.prospect_type === "vacant" ? "bg-yellow-50 text-yellow-600" :
+                        "bg-gray-50 text-gray-500"
+                      }`}>
+                        {{
+                          absentee_owner: "Business-Focused", pre_foreclosure: "Empathetic", probate: "Sensitive",
+                          long_term_owner: "Congratulatory", tax_delinquent: "Helpful", vacant: "Practical",
+                          fsbo: "Respectful", expired_listing: "Professional",
+                        }[p.prospect_type] || "Standard"}
+                      </span>
+                      <span className="text-xs text-gray-400 truncate">{p.property_city}, {p.property_state}</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <p className="text-gray-400 text-sm">Score prospects to see them here.</p>

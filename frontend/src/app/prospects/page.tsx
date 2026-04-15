@@ -8,6 +8,28 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
 import FilterBar, { type FilterConfig } from "@/components/ui/FilterBar";
 
+const prospectToneLabels: Record<string, string> = {
+  absentee_owner: "Business-Focused",
+  pre_foreclosure: "Empathetic",
+  probate: "Sensitive",
+  long_term_owner: "Congratulatory",
+  expired_listing: "Professional",
+  fsbo: "Respectful",
+  vacant: "Practical",
+  tax_delinquent: "Helpful",
+};
+
+const prospectToneColors: Record<string, string> = {
+  absentee_owner: "bg-purple-50 text-purple-600",
+  pre_foreclosure: "bg-red-50 text-red-600",
+  probate: "bg-amber-50 text-amber-600",
+  long_term_owner: "bg-blue-50 text-blue-600",
+  expired_listing: "bg-gray-100 text-gray-600",
+  fsbo: "bg-emerald-50 text-emerald-600",
+  vacant: "bg-yellow-50 text-yellow-600",
+  tax_delinquent: "bg-orange-50 text-orange-600",
+};
+
 const prospectTypeLabels: Record<string, string> = {
   absentee_owner: "Absentee Owner",
   pre_foreclosure: "Pre-Foreclosure",
@@ -188,6 +210,7 @@ export default function ProspectsPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Owner</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Property</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">AI Tone</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Score</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Consent</th>
@@ -211,6 +234,11 @@ export default function ProspectsPage() {
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${prospectTypeColors[p.prospect_type] || "bg-gray-100 text-gray-600"}`}>
                       {prospectTypeLabels[p.prospect_type] || p.prospect_type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${prospectToneColors[p.prospect_type] || "bg-gray-100 text-gray-500"}`}>
+                      {prospectToneLabels[p.prospect_type] || "Standard"}
                     </span>
                   </td>
                   <td className="px-4 py-3">

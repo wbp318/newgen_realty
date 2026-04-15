@@ -180,6 +180,18 @@ export default function ProspectDetailPage() {
   const ms = (prospect.motivation_signals || {}) as Record<string, string | number | boolean | null>;
   const stateLabel = prospect.property_state === "LA" ? "Parish" : "County";
 
+  const toneMap: Record<string, { tone: string; toneColor: string; approach: string; keyRule: string }> = {
+    absentee_owner: { tone: "Business-Focused", toneColor: "bg-purple-100 text-purple-700", approach: "Emphasize hassle-free sale, remove management burden from a distance", keyRule: "Focus on the financial upside and convenience" },
+    pre_foreclosure: { tone: "Empathetic", toneColor: "bg-red-100 text-red-700", approach: "Offer options and help navigating financial difficulty", keyRule: "NEVER use the word 'foreclosure' in outreach" },
+    probate: { tone: "Sensitive", toneColor: "bg-amber-100 text-amber-700", approach: "Acknowledge the loss, offer to simplify estate settlement", keyRule: "Lead with empathy — someone passed away" },
+    long_term_owner: { tone: "Congratulatory", toneColor: "bg-blue-100 text-blue-700", approach: "Highlight equity growth and market timing opportunity", keyRule: "They may not know their home's current value" },
+    tax_delinquent: { tone: "Helpful", toneColor: "bg-orange-100 text-orange-700", approach: "Mention selling could resolve tax situation", keyRule: "Be helpful, not predatory — they're in financial stress" },
+    vacant: { tone: "Practical", toneColor: "bg-yellow-100 text-yellow-700", approach: "Highlight carrying costs, liability, convert burden to cash", keyRule: "Focus on the financial drain of an empty property" },
+    fsbo: { tone: "Respectful", toneColor: "bg-emerald-100 text-emerald-700", approach: "Respect their effort, offer professional value-add", keyRule: "Don't insult their approach — show what you add" },
+    expired_listing: { tone: "Professional", toneColor: "bg-gray-200 text-gray-700", approach: "Offer fresh strategy, explain what you'd do differently", keyRule: "Don't bash their previous agent" },
+  };
+  const toneInfo = toneMap[prospect.prospect_type] || { tone: "Professional", toneColor: "bg-gray-200 text-gray-700", approach: "Standard professional outreach", keyRule: "" };
+
   return (
     <div className="max-w-5xl">
       {/* Breadcrumb */}
@@ -328,6 +340,28 @@ export default function ProspectDetailPage() {
             )}
           </div>
 
+          {/* AI Outreach Approach */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-emerald-400">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">AI Outreach Approach</h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">Tone:</span>
+                <span className={`text-sm px-2.5 py-1 rounded-full font-semibold ${toneInfo.toneColor}`}>
+                  {toneInfo.tone}
+                </span>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Approach:</span>
+                <p className="text-sm text-gray-900 mt-1">{toneInfo.approach}</p>
+              </div>
+              {toneInfo.keyRule && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <p className="text-xs font-medium text-amber-800">Key Rule: {toneInfo.keyRule}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* AI Score */}
           {prospect.ai_prospect_score !== null && (
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -448,7 +482,10 @@ export default function ProspectDetailPage() {
           {/* Generated Outreach */}
           {generatedMessage && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Generated Outreach</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold text-gray-900">Generated Outreach</h2>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${toneInfo.toneColor}`}>{toneInfo.tone}</span>
+              </div>
               {generatedMessage.compliance_flags.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-800">
                   Compliance flags: {generatedMessage.compliance_flags.join(", ")}
