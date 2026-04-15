@@ -1,28 +1,41 @@
 # NewGen Realty AI
 
-## Quickstart (Get Running in 2 Minutes)
+## Quickstart — Windows (Get Running in 2 Minutes)
 
+You need: **Python 3.12+**, **Node.js 18+**, and an **[Anthropic API key](https://console.anthropic.com/)**.
+
+**Step 1 — Clone and set up the backend:**
 ```bash
 git clone https://github.com/wbp318/newgen_realty.git
-cd newgen_realty
-
-# Backend
-cd backend
+cd newgen_realty\backend
 python -m venv venv
-source venv/Scripts/activate   # Mac/Linux: source venv/bin/activate
+venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env           # Then edit .env and add your ANTHROPIC_API_KEY
-uvicorn app.main:app --reload --port 8000
+copy .env.example .env
+notepad .env
+```
+In notepad: replace `sk-ant-your-key-here` with your real Anthropic API key. Change the DATABASE_URL line to:
+```
+DATABASE_URL=sqlite+aiosqlite:///./newgen_realty.db
+```
+Save and close notepad.
 
-# Frontend (new terminal)
-cd frontend
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+**Step 2 — Open a second terminal and start the frontend:**
+```bash
+cd newgen_realty\frontend
 npm install
 npm run dev
 ```
 
-Open **http://localhost:3000** — that's it. Add a property, chat with the AI, or go to Prospects to search public records.
+**Step 3 — Open http://localhost:3000** — that's it.
 
-> **Only thing required:** An [Anthropic API key](https://console.anthropic.com/). Everything else (ATTOM, Realty Mole, skip tracing) is optional and unlocks extra features.
+> **Mac/Linux?** Same steps but use `source venv/bin/activate` instead of `venv\Scripts\activate`, and `cp .env.example .env` instead of `copy`.
+
+> **Only thing required:** An Anthropic API key. Everything else (ATTOM, Realty Mole, skip tracing) is optional and unlocks extra features.
 
 ---
 
