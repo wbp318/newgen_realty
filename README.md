@@ -11,6 +11,16 @@ You need: **Python 3.12+**, **Node.js 18+**, and an **Anthropic API key**.
 4. Click **Create Key**, name it whatever you want
 5. Copy the key — it starts with `sk-ant-` and you'll paste it in Step 1
 
+**Optional API keys (add these to `.env` later to unlock more features):**
+
+| Key | What It Unlocks | How to Get It | Cost |
+|-----|----------------|---------------|------|
+| `REALTY_MOLE_API_KEY` | Real comparable sales data for AI pricing analysis | 1. Go to [rapidapi.com](https://rapidapi.com/realtymole/api/realty-mole-property-api) 2. Create account 3. Subscribe to Realty Mole Property API 4. Copy your RapidAPI key from the dashboard | Free tier available (50 requests/mo), paid plans from $20/mo |
+| `ATTOM_API_KEY` | Public record prospect searching (absentee owners, pre-foreclosures, tax delinquent, etc.) | 1. Go to [api.gateway.attomdata.com](https://api.gateway.attomdata.com/) 2. Create account 3. Subscribe to a plan 4. Copy your API key | Starting ~$95/mo |
+| `SKIP_TRACE_API_KEY` | Find phone/email for prospects with no contact info | 1. Go to [batchskiptracing.com](https://www.batchskiptracing.com/) 2. Create account 3. Add credits 4. Copy your API key 5. Also set `SKIP_TRACE_PROVIDER=batchskiptracing` in `.env` | ~$0.15 per record |
+
+You can add any of these later — the platform works without them, you just won't have access to those specific features.
+
 **Step 1 — Clone and set up the backend:**
 ```bash
 git clone https://github.com/wbp318/newgen_realty.git
