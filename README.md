@@ -75,6 +75,25 @@ When you generate outreach, the system checks TCPA compliance and shows flags. *
 
 No flags = **"Clear"** in green — safe to send via any channel. **[Full TCPA compliance reference →](COMPLIANCE.md)**
 
+## AI Model Strategy
+
+The platform uses a split model approach to balance quality and cost:
+
+| Feature | Model | Why |
+|---------|-------|-----|
+| Chat | **Haiku 4.5** ($0.80/$4 per M tokens) | Conversational, high volume, fast responses |
+| Dashboard Insights | **Haiku 4.5** | Summary/analysis, good enough quality |
+| Listing Generation | **Sonnet 4** ($3/$15 per M tokens) | Copywriting quality matters for MLS |
+| Comp Analysis | **Sonnet 4** | Pricing accuracy is critical |
+| Lead Scoring | **Sonnet 4** | Nuanced evaluation of buyer readiness |
+| Property Matching | **Sonnet 4** | Nuanced preference-to-inventory matching |
+| Communication Drafting | **Sonnet 4** | Client-facing writing quality |
+| Prospect Scoring | **Sonnet 4** | Motivation signal analysis needs depth |
+| Outreach Generation | **Sonnet 4** | Tone/empathy adaptation is the key differentiator |
+| Campaign Insights | **Sonnet 4** | Strategic optimization recommendations |
+
+Configurable via `AI_MODEL` (Sonnet, default) and `AI_MODEL_FAST` (Haiku, default) in `.env`.
+
 ## Features
 
 ### AI Prospecting Engine
@@ -186,25 +205,6 @@ Penalties are up to **$1,500 per violation**. The platform enforces compliance a
 | **Key markets** | New Orleans, Baton Rouge, Lafayette, Shreveport | Little Rock, NW Arkansas (fastest growing US metro), Fort Smith | Jackson, Gulf Coast (Gulfport/Biloxi), Hattiesburg, DeSoto County |
 
 The platform dynamically labels "Parish" for LA and "County" for AR/MS throughout the UI. AI prompts include state-specific legal frameworks, property styles, and market context.
-
-## AI Model Strategy
-
-The platform uses a split model approach to balance quality and cost:
-
-| Feature | Model | Why |
-|---------|-------|-----|
-| Chat | **Haiku 4.5** ($0.80/$4 per M tokens) | Conversational, high volume, fast responses |
-| Dashboard Insights | **Haiku 4.5** | Summary/analysis, good enough quality |
-| Listing Generation | **Sonnet 4** ($3/$15 per M tokens) | Copywriting quality matters for MLS |
-| Comp Analysis | **Sonnet 4** | Pricing accuracy is critical |
-| Lead Scoring | **Sonnet 4** | Nuanced evaluation of buyer readiness |
-| Property Matching | **Sonnet 4** | Nuanced preference-to-inventory matching |
-| Communication Drafting | **Sonnet 4** | Client-facing writing quality |
-| Prospect Scoring | **Sonnet 4** | Motivation signal analysis needs depth |
-| Outreach Generation | **Sonnet 4** | Tone/empathy adaptation is the key differentiator |
-| Campaign Insights | **Sonnet 4** | Strategic optimization recommendations |
-
-Configurable via `AI_MODEL` (Sonnet, default) and `AI_MODEL_FAST` (Haiku, default) in `.env`.
 
 ## Tech Stack
 
