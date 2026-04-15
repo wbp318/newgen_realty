@@ -1,5 +1,31 @@
 # NewGen Realty AI
 
+## Quickstart (Get Running in 2 Minutes)
+
+```bash
+git clone https://github.com/wbp318/newgen_realty.git
+cd newgen_realty
+
+# Backend
+cd backend
+python -m venv venv
+source venv/Scripts/activate   # Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env           # Then edit .env and add your ANTHROPIC_API_KEY
+uvicorn app.main:app --reload --port 8000
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000** — that's it. Add a property, chat with the AI, or go to Prospects to search public records.
+
+> **Only thing required:** An [Anthropic API key](https://console.anthropic.com/). Everything else (ATTOM, Realty Mole, skip tracing) is optional and unlocks extra features.
+
+---
+
 AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives a solo agent the tools of a full brokerage — AI prospecting from public records, AI-scored leads, personalized outreach, listing generation, comp analysis, lead scoring, property matching, and a smart dashboard — all tuned for the unique markets of LA, AR, and MS.
 
 **The gap it fills:** No existing tool combines public record lead generation + AI motivation scoring + AI-personalized outreach + campaign tracking + CRM in one platform. Agents currently pay $300+/month across 5-8 separate tools (PropStream, BatchLeads, Follow Up Boss, ChatGPT, Mailchimp, etc.) and manually copy-paste between them. NewGen replaces that entire stack.
