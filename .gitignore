@@ -1,4 +1,4 @@
-# Environment
+# Environment (API keys, secrets — never commit)
 .env
 .env.local
 .env.*.local
@@ -12,25 +12,36 @@ dist/
 build/
 .venv/
 venv/
+*.egg
 
 # Node
 node_modules/
 .next/
 out/
+npm-debug.log*
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-*
 
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
+ehthumbs.db
 
-# Database
+# Database (local dev only — never commit)
 *.db
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Docker
 docker-compose.override.yml
+
+# Claude Code (session files)
+.claude/
