@@ -6,6 +6,19 @@ from app.schemas.ai import (
     CompAnalysisRequest, CompAnalysisResponse,
     CommDraftRequest, CommDraftResponse,
 )
+from app.schemas.prospect import (
+    ProspectCreate, ProspectUpdate, ProspectResponse,
+    ProspectSearchRequest, ProspectSearchResponse,
+    ProspectScoreRequest, ProspectScoreResponse,
+    BulkScoreRequest, BulkScoreResponse,
+    ProspectListCreate, ProspectListUpdate, ProspectListResponse,
+)
+from app.schemas.outreach import (
+    OutreachCampaignCreate, OutreachCampaignUpdate, OutreachCampaignResponse,
+    OutreachMessageResponse,
+    GenerateMessageRequest, GenerateMessageResponse,
+    CampaignInsightsResponse,
+)
 
 __all__ = [
     "PropertyCreate", "PropertyUpdate", "PropertyResponse",
@@ -14,4 +27,13 @@ __all__ = [
     "ListingRequest", "ListingResponse",
     "CompAnalysisRequest", "CompAnalysisResponse",
     "CommDraftRequest", "CommDraftResponse",
+    "ProspectCreate", "ProspectUpdate", "ProspectResponse",
+    "ProspectSearchRequest", "ProspectSearchResponse",
+    "ProspectScoreRequest", "ProspectScoreResponse",
+    "BulkScoreRequest", "BulkScoreResponse",
+    "ProspectListCreate", "ProspectListUpdate", "ProspectListResponse",
+    "OutreachCampaignCreate", "OutreachCampaignUpdate", "OutreachCampaignResponse",
+    "OutreachMessageResponse",
+    "GenerateMessageRequest", "GenerateMessageResponse",
+    "CampaignInsightsResponse",
 ]

@@ -69,4 +69,47 @@ export const searchMarketComps = (data: Record<string, unknown>) =>
 export const lookupProperty = (address: string) =>
   api.post("/api/market/property", { address });
 
+// Prospects
+export const getProspects = (params?: Record<string, string | number>) =>
+  api.get("/api/prospects", { params });
+export const createProspect = (data: Record<string, unknown>) =>
+  api.post("/api/prospects", data);
+export const getProspect = (id: string) => api.get(`/api/prospects/${id}`);
+export const updateProspect = (id: string, data: Record<string, unknown>) =>
+  api.put(`/api/prospects/${id}`, data);
+export const deleteProspect = (id: string) =>
+  api.delete(`/api/prospects/${id}`);
+export const searchProspects = (data: Record<string, unknown>) =>
+  api.post("/api/prospects/search", data);
+export const enrichProspect = (id: string) =>
+  api.post(`/api/prospects/${id}/enrich`);
+export const convertProspect = (id: string) =>
+  api.post(`/api/prospects/${id}/convert`);
+export const getAttomStatus = () => api.get("/api/prospects/status");
+
+// Prospect Lists
+export const getProspectLists = () => api.get("/api/prospects/lists");
+export const createProspectList = (data: Record<string, unknown>) =>
+  api.post("/api/prospects/lists", data);
+export const getProspectList = (id: string) =>
+  api.get(`/api/prospects/lists/${id}`);
+export const updateProspectList = (id: string, data: Record<string, unknown>) =>
+  api.put(`/api/prospects/lists/${id}`, data);
+
+// Outreach Campaigns (Phase 2 — endpoints not yet built)
+export const getOutreachCampaigns = (params?: Record<string, string | number>) =>
+  api.get("/api/outreach/campaigns", { params });
+export const createOutreachCampaign = (data: Record<string, unknown>) =>
+  api.post("/api/outreach/campaigns", data);
+export const getOutreachCampaign = (id: string) =>
+  api.get(`/api/outreach/campaigns/${id}`);
+export const updateOutreachCampaign = (id: string, data: Record<string, unknown>) =>
+  api.put(`/api/outreach/campaigns/${id}`, data);
+export const generateOutreachMessage = (data: Record<string, unknown>) =>
+  api.post("/api/outreach/generate-message", data);
+export const getCampaignMessages = (campaignId: string) =>
+  api.get(`/api/outreach/campaigns/${campaignId}/messages`);
+export const getCampaignInsights = (campaignId: string) =>
+  api.post(`/api/outreach/campaigns/${campaignId}/insights`);
+
 export default api;

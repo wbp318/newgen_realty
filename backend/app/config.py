@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     MAX_TOKENS_COMM: int = 512  # emails/texts are short
     # Market data (Realty Mole via RapidAPI)
     REALTY_MOLE_API_KEY: str = ""
+    # Prospect data (ATTOM Data API)
+    ATTOM_API_KEY: str = ""
+    MAX_TOKENS_PROSPECT_SCORE: int = 1000
+    MAX_TOKENS_OUTREACH: int = 800
+    MAX_TOKENS_CAMPAIGN_INSIGHTS: int = 1500
     SUPPORTED_STATES: list[str] = ["LA", "AR", "MS"]
 
     class Config:

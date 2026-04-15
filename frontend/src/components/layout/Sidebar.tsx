@@ -8,6 +8,8 @@ const navItems = [
   { href: "/ai", label: "AI Assistant", icon: "🤖" },
   { href: "/properties", label: "Properties", icon: "🏠" },
   { href: "/contacts", label: "Contacts", icon: "👥" },
+  { href: "/prospects", label: "Prospects", icon: "🎯" },
+  { href: "/outreach", label: "Outreach", icon: "📬" },
 ];
 
 export default function Sidebar() {
@@ -41,7 +43,7 @@ export default function Sidebar() {
         })}
       </nav>
       <div className="pt-4 border-t border-gray-700 text-xs text-gray-500">
-        Louisiana &bull; NewGen Realty AI v0.1
+        LA &bull; AR &bull; MS &bull; NewGen Realty AI v0.2
       </div>
     </aside>
   );

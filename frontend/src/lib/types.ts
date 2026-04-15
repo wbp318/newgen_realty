@@ -124,3 +124,124 @@ export interface CompAnalysisResult {
   price_range_high: number;
   analysis: string;
 }
+
+// Prospects
+export interface Prospect {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  mailing_address: string | null;
+  property_address: string;
+  property_city: string | null;
+  property_parish: string | null;
+  property_state: string;
+  property_zip: string | null;
+  prospect_type: string;
+  status: string;
+  motivation_signals: Record<string, unknown> | null;
+  property_data: Record<string, unknown> | null;
+  ai_prospect_score: number | null;
+  ai_prospect_score_reason: string | null;
+  ai_scored_at: string | null;
+  consent_status: string;
+  consent_date: string | null;
+  consent_method: string | null;
+  dnc_checked: boolean;
+  dnc_checked_at: string | null;
+  dnc_listed: boolean;
+  opt_out_date: string | null;
+  opt_out_processed: boolean;
+  contact_window_timezone: string | null;
+  contact_id: string | null;
+  data_source: string;
+  source_record_id: string | null;
+  notes: string | null;
+  tags: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProspectList {
+  id: string;
+  name: string;
+  description: string | null;
+  search_criteria: Record<string, unknown> | null;
+  prospect_count: number;
+  prospect_ids: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProspectSearchResult {
+  prospects: Prospect[];
+  total_found: number;
+  imported_count: number;
+  skipped_count: number;
+  search_criteria: Record<string, unknown>;
+  source: string;
+}
+
+export interface ProspectScoreResult {
+  prospect_id: string;
+  score: number;
+  reason: string;
+  motivation_level: string;
+  suggested_approach: string | null;
+  suggested_outreach_type: string | null;
+}
+
+// Outreach
+export interface OutreachCampaign {
+  id: string;
+  name: string;
+  description: string | null;
+  campaign_type: string | null;
+  status: string;
+  prospect_list_id: string | null;
+  message_template: string | null;
+  ai_personalize: boolean;
+  total_messages: number;
+  sent_count: number;
+  delivered_count: number;
+  opened_count: number;
+  replied_count: number;
+  ai_campaign_insights: string | null;
+  ai_insights_generated_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachMessage {
+  id: string;
+  campaign_id: string;
+  prospect_id: string;
+  medium: string;
+  subject: string | null;
+  body: string;
+  status: string;
+  sent_at: string | null;
+  delivered_at: string | null;
+  opened_at: string | null;
+  replied_at: string | null;
+  consent_verified: boolean;
+  dnc_cleared: boolean;
+  compliance_notes: string | null;
+  created_at: string;
+}
+
+export interface GeneratedMessage {
+  subject: string | null;
+  body: string;
+  compliance_flags: string[];
+}
+
+export interface CampaignInsights {
+  campaign_id: string;
+  total_sent: number;
+  response_rate: number;
+  top_performing_prospect_types: string[];
+  suggestions: string[];
+  raw_analysis: string;
+}

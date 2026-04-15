@@ -1,0 +1,400 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect } from "@/lib/api";
+import type { Prospect } from "@/lib/types";
+import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
+import StatusBadge from "@/components/ui/StatusBadge";
+
+const prospectTypeLabels: Record<string, string> = {
+  absentee_owner: "Absentee Owner",
+  pre_foreclosure: "Pre-Foreclosure",
+  probate: "Probate",
+  long_term_owner: "Long-Term Owner",
+  expired_listing: "Expired Listing",
+  fsbo: "FSBO",
+  vacant: "Vacant",
+  tax_delinquent: "Tax Delinquent",
+};
+
+const prospectTypeColors: Record<string, string> = {
+  absentee_owner: "bg-purple-100 text-purple-700",
+  pre_foreclosure: "bg-red-100 text-red-700",
+  probate: "bg-amber-100 text-amber-700",
+  long_term_owner: "bg-blue-100 text-blue-700",
+  expired_listing: "bg-gray-200 text-gray-700",
+  fsbo: "bg-emerald-100 text-emerald-700",
+  vacant: "bg-yellow-100 text-yellow-700",
+  tax_delinquent: "bg-orange-100 text-orange-700",
+};
+
+const statusOptions = [
+  "new", "researching", "qualified", "contacted",
+  "responding", "converted", "not_interested", "do_not_contact",
+];
+
+export default function ProspectDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const [prospect, setProspect] = useState<Prospect | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<Record<string, unknown>>({});
+  const [saving, setSaving] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const [converting, setConverting] = useState(false);
+
+  useEffect(() => {
+    loadProspect();
+  }, [id]);
+
+  async function loadProspect() {
+    try {
+      const res = await getProspect(id);
+      setProspect(res.data);
+      setForm(res.data);
+    } catch {
+      router.push("/prospects");
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await updateProspect(id, {
+        first_name: form.first_name || null,
+        last_name: form.last_name || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        mailing_address: form.mailing_address || null,
+        status: form.status,
+        notes: form.notes || null,
+      });
+      await loadProspect();
+      setEditing(false);
+    } catch {
+      alert("Error saving");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEnrich() {
+    setEnriching(true);
+    try {
+      await enrichProspect(id);
+      await loadProspect();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Error enriching prospect";
+      alert(msg);
+    } finally {
+      setEnriching(false);
+    }
+  }
+
+  async function handleConvert() {
+    if (!confirm("Convert this prospect to a CRM Contact? This will create a new contact record.")) return;
+    setConverting(true);
+    try {
+      const res = await convertProspect(id);
+      router.push(`/contacts/${res.data.id}`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Error converting";
+      alert(msg);
+    } finally {
+      setConverting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Delete this prospect? This cannot be undone.")) return;
+    await deleteProspect(id);
+    router.push("/prospects");
+  }
+
+  if (!prospect) {
+    return <div className="text-gray-400">Loading...</div>;
+  }
+
+  const pd = (prospect.property_data || {}) as Record<string, string | number | boolean | null>;
+  const ms = (prospect.motivation_signals || {}) as Record<string, string | number | boolean | null>;
+  const stateLabel = prospect.property_state === "LA" ? "Parish" : "County";
+
+  return (
+    <div className="max-w-5xl">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+        <Link href="/prospects" className="hover:text-emerald-600">Prospects</Link>
+        <span>/</span>
+        <span className="text-gray-900">
+          {prospect.first_name || prospect.last_name
+            ? `${prospect.first_name || ""} ${prospect.last_name || ""}`.trim()
+            : prospect.property_address}
+        </span>
+      </div>
+
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {prospect.first_name || prospect.last_name
+                ? `${prospect.first_name || ""} ${prospect.last_name || ""}`.trim()
+                : "Unknown Owner"}
+            </h1>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${prospectTypeColors[prospect.prospect_type] || "bg-gray-100 text-gray-600"}`}>
+              {prospectTypeLabels[prospect.prospect_type] || prospect.prospect_type}
+            </span>
+            <ProspectScoreBadge score={prospect.ai_prospect_score} />
+            <StatusBadge value={prospect.status} />
+          </div>
+          <p className="text-sm text-gray-500 mt-1">{prospect.property_address}, {prospect.property_city}, {prospect.property_state} {prospect.property_zip}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setEditing(!editing)} className="text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-gray-700">
+            {editing ? "Cancel" : "Edit"}
+          </button>
+          <button onClick={handleDelete} className="text-sm px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Owner Details */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Owner Details</h2>
+            {editing ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">First Name</label>
+                  <input value={String(form.first_name || "")} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Last Name</label>
+                  <input value={String(form.last_name || "")} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Email</label>
+                  <input value={String(form.email || "")} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Phone</label>
+                  <input value={String(form.phone || "")} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-500">Mailing Address</label>
+                  <input value={String(form.mailing_address || "")} onChange={(e) => setForm({ ...form, mailing_address: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Status</label>
+                  <select value={String(form.status || "new")} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900">
+                    {statusOptions.map((s) => (
+                      <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Data Source</label>
+                  <input value={prospect.data_source} disabled className="w-full border rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-500">Notes</label>
+                  <textarea value={String(form.notes || "")} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900" rows={3} />
+                </div>
+                <button onClick={handleSave} disabled={saving} className="col-span-2 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-y-3 text-sm">
+                <div><span className="text-gray-500">Email</span><p className="font-medium text-gray-900">{prospect.email || "—"}</p></div>
+                <div><span className="text-gray-500">Phone</span><p className="font-medium text-gray-900">{prospect.phone || "—"}</p></div>
+                <div className="col-span-2"><span className="text-gray-500">Mailing Address</span><p className="font-medium text-gray-900">{prospect.mailing_address || "—"}</p></div>
+                <div><span className="text-gray-500">Data Source</span><p className="font-medium text-gray-900">{prospect.data_source}</p></div>
+                <div><span className="text-gray-500">Source Record ID</span><p className="font-medium text-gray-900 text-xs">{prospect.source_record_id || "—"}</p></div>
+                {prospect.notes && (
+                  <div className="col-span-2"><span className="text-gray-500">Notes</span><p className="font-medium text-gray-900">{prospect.notes}</p></div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Property Details */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Property Details</h2>
+            <div className="grid grid-cols-2 gap-y-3 text-sm">
+              <div className="col-span-2"><span className="text-gray-500">Address</span><p className="font-medium text-gray-900">{prospect.property_address}</p></div>
+              <div><span className="text-gray-500">City</span><p className="font-medium text-gray-900">{prospect.property_city || "—"}</p></div>
+              <div><span className="text-gray-500">{stateLabel}</span><p className="font-medium text-gray-900">{prospect.property_parish || "—"}</p></div>
+              <div><span className="text-gray-500">State</span><p className="font-medium text-gray-900">{prospect.property_state}</p></div>
+              <div><span className="text-gray-500">Zip</span><p className="font-medium text-gray-900">{prospect.property_zip || "—"}</p></div>
+              {pd.sqft && <div><span className="text-gray-500">SqFt</span><p className="font-medium text-gray-900">{Number(pd.sqft).toLocaleString()}</p></div>}
+              {pd.bedrooms && <div><span className="text-gray-500">Bedrooms</span><p className="font-medium text-gray-900">{String(pd.bedrooms)}</p></div>}
+              {pd.bathrooms && <div><span className="text-gray-500">Bathrooms</span><p className="font-medium text-gray-900">{String(pd.bathrooms)}</p></div>}
+              {pd.year_built && <div><span className="text-gray-500">Year Built</span><p className="font-medium text-gray-900">{String(pd.year_built)}</p></div>}
+              {pd.lot_size_acres && <div><span className="text-gray-500">Lot Size</span><p className="font-medium text-gray-900">{String(pd.lot_size_acres)} acres</p></div>}
+              {pd.property_type && <div><span className="text-gray-500">Property Type</span><p className="font-medium text-gray-900">{String(pd.property_type)}</p></div>}
+              {pd.assessed_value && <div><span className="text-gray-500">Assessed Value</span><p className="font-medium text-emerald-600">${Number(pd.assessed_value).toLocaleString()}</p></div>}
+              {pd.market_value && <div><span className="text-gray-500">Market Value</span><p className="font-medium text-emerald-600">${Number(pd.market_value).toLocaleString()}</p></div>}
+              {pd.avm_value && <div><span className="text-gray-500">AVM Estimate</span><p className="font-medium text-emerald-600">${Number(pd.avm_value).toLocaleString()}</p></div>}
+              {pd.tax_amount && <div><span className="text-gray-500">Tax Amount</span><p className="font-medium text-gray-900">${Number(pd.tax_amount).toLocaleString()}</p></div>}
+              {pd.last_sale_price && <div><span className="text-gray-500">Last Sale Price</span><p className="font-medium text-gray-900">${Number(pd.last_sale_price).toLocaleString()}</p></div>}
+              {pd.last_sale_date && <div><span className="text-gray-500">Last Sale Date</span><p className="font-medium text-gray-900">{String(pd.last_sale_date)}</p></div>}
+            </div>
+          </div>
+
+          {/* Motivation Signals */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Motivation Signals</h2>
+            {Object.keys(ms).length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(ms).map(([key, value]) => (
+                  <div key={key} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      value === true || (typeof value === "number" && value > 0) ? "bg-red-500" : "bg-gray-300"
+                    }`} />
+                    <span className="text-sm text-gray-700">{key.replace(/_/g, " ")}</span>
+                    <span className="text-sm font-medium text-gray-900 ml-auto">
+                      {typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-400 text-sm">No signals recorded. Try enriching the prospect.</p>
+            )}
+          </div>
+
+          {/* AI Score */}
+          {prospect.ai_prospect_score !== null && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Prospect Score</h2>
+              <div className="flex items-center gap-3 mb-2">
+                <ProspectScoreBadge score={prospect.ai_prospect_score} size="md" />
+              </div>
+              {prospect.ai_prospect_score_reason && (
+                <p className="text-sm text-gray-600">{prospect.ai_prospect_score_reason}</p>
+              )}
+            </div>
+          )}
+
+          {/* TCPA Compliance */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">TCPA Compliance</h2>
+            <div className="grid grid-cols-2 gap-y-3 text-sm">
+              <div>
+                <span className="text-gray-500">Consent Status</span>
+                <p className="font-medium">
+                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                    prospect.consent_status === "granted" ? "bg-emerald-100 text-emerald-700" :
+                    prospect.consent_status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                    prospect.consent_status === "denied" || prospect.consent_status === "revoked" ? "bg-red-100 text-red-700" :
+                    "bg-gray-100 text-gray-600"
+                  }`}>
+                    {prospect.consent_status}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-500">DNC Listed</span>
+                <p className="font-medium">
+                  <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${
+                    prospect.dnc_listed ? "bg-red-100 text-red-700" :
+                    prospect.dnc_checked ? "bg-emerald-100 text-emerald-700" :
+                    "bg-gray-100 text-gray-600"
+                  }`}>
+                    {prospect.dnc_listed ? "On DNC List" : prospect.dnc_checked ? "Cleared" : "Not Checked"}
+                  </span>
+                </p>
+              </div>
+              {prospect.consent_date && (
+                <div><span className="text-gray-500">Consent Date</span><p className="font-medium text-gray-900">{new Date(prospect.consent_date).toLocaleDateString()}</p></div>
+              )}
+              {prospect.opt_out_date && (
+                <div><span className="text-gray-500">Opt-Out Date</span><p className="font-medium text-red-600">{new Date(prospect.opt_out_date).toLocaleDateString()}</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="space-y-2">
+              <button
+                onClick={handleEnrich}
+                disabled={enriching}
+                className="w-full text-sm bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {enriching ? "Enriching..." : "Enrich with ATTOM Data"}
+              </button>
+              <button
+                disabled
+                className="w-full text-sm bg-emerald-600 text-white px-3 py-2 rounded-lg opacity-50 cursor-not-allowed"
+                title="Coming in Phase 2"
+              >
+                Score Prospect (Phase 2)
+              </button>
+              <button
+                disabled
+                className="w-full text-sm bg-purple-600 text-white px-3 py-2 rounded-lg opacity-50 cursor-not-allowed"
+                title="Coming in Phase 2"
+              >
+                Generate Outreach (Phase 2)
+              </button>
+              <button
+                onClick={handleConvert}
+                disabled={converting || prospect.status === "converted"}
+                className="w-full text-sm bg-amber-600 text-white px-3 py-2 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {prospect.status === "converted" ? "Already Converted" : converting ? "Converting..." : "Convert to Contact"}
+              </button>
+              {prospect.contact_id && (
+                <Link href={`/contacts/${prospect.contact_id}`} className="block w-full text-center text-sm border border-emerald-300 text-emerald-700 px-3 py-2 rounded-lg hover:bg-emerald-50">
+                  View Contact Record
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Meta Info */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Info</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Created</span>
+                <span className="text-gray-900">{new Date(prospect.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Updated</span>
+                <span className="text-gray-900">{new Date(prospect.updated_at).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Source</span>
+                <span className="text-gray-900">{prospect.data_source}</span>
+              </div>
+              {prospect.tags && prospect.tags.length > 0 && (
+                <div>
+                  <span className="text-gray-500">Tags</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {prospect.tags.map((tag) => (
+                      <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
