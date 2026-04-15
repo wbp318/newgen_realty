@@ -43,17 +43,35 @@ git --version       # Should show 2.x+
 
 You can add any of these later — the platform works without them, you just won't have access to those specific features.
 
-**Step 1 — Clone and set up the backend:**
+**Step 1 — Download the code.** Open a regular (non-admin) terminal and run:
 ```bash
 git clone https://github.com/wbp318/newgen_realty.git
+```
+This downloads the entire project into a folder called `newgen_realty`. Now navigate into the backend folder:
+```bash
 cd newgen_realty\backend
+```
+
+**Step 2 — Set up the Python environment.** Run these one at a time:
+```bash
 python -m venv venv
+```
+This creates an isolated Python environment. Now activate it:
+```bash
 venv\Scripts\activate
+```
+You should see `(venv)` appear at the start of your command line. That means you're inside the virtual environment. Now install the dependencies:
+```bash
 pip install -r requirements.txt
+```
+This will download and install about 30 packages. Wait for it to finish (you'll see "Successfully installed..." at the end).
+
+**Step 3 — Set up the API key.** Run:
+```bash
 copy .env.example .env
 notepad .env
 ```
-In notepad, make the file look exactly like this (replace the API key with yours):
+This opens notepad with the config file. **Delete everything in the file** and replace it with this (paste your real API key on the first line):
 ```
 ANTHROPIC_API_KEY=sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXXX
 DATABASE_URL=sqlite+aiosqlite:///./newgen_realty.db
@@ -62,27 +80,45 @@ ATTOM_API_KEY=
 SKIP_TRACE_PROVIDER=free
 SKIP_TRACE_API_KEY=
 ```
-- The `ANTHROPIC_API_KEY` line is the only one you MUST fill in — paste your full key after the `=` sign (no spaces, no quotes)
-- The `DATABASE_URL` line MUST be changed from the template — the template has a PostgreSQL URL that won't work without Docker
-- Leave the other keys blank for now — they're optional and unlock extra features later
+- **Line 1** — Replace the `sk-ant-api03-XXX...` with your real Anthropic API key. Paste the whole thing after the `=` sign. No spaces, no quotes.
+- **Line 2** — Leave exactly as shown. This tells the app to use a local database file.
+- **Lines 3-6** — Leave blank after the `=` sign. These are optional features.
 
-Save and close notepad.
+Now **save the file** (Ctrl+S) and **close notepad** (click the X or Alt+F4).
 
+**Step 4 — Start the backend.** Back in your terminal (the one that still shows `(venv)`), run:
 ```bash
-# This starts the backend API server — keep this terminal open
-# --reload means it auto-restarts when you edit code
 uvicorn app.main:app --reload --port 8000
 ```
-You should see `Uvicorn running on http://127.0.0.1:8000` — that means it's working. **Keep this terminal open.**
+Wait a few seconds. You should see something like:
+```
+INFO:     Uvicorn running on http://127.0.0.1:8000
+INFO:     Application startup complete.
+```
+That means the backend is running. **Do NOT close this terminal — leave it running.**
 
-**Step 2 — Open a second terminal and start the frontend:**
+**Step 5 — Open a NEW terminal window** (right-click your taskbar terminal icon → "New Window", or press Ctrl+Shift+N). In this new terminal, run:
 ```bash
 cd newgen_realty\frontend
 npm install
+```
+This installs the frontend dependencies (takes 30-60 seconds). When it's done, run:
+```bash
 npm run dev
 ```
+Wait a few seconds. You should see:
+```
+▲ Next.js 16.x.x
+- Local: http://localhost:3000
+✓ Ready
+```
+**Leave this terminal running too** — you now have two terminals open.
 
-**Step 3 — Open http://localhost:3000** — that's it.
+**Step 6 — Open the app.** Open your web browser (Chrome, Edge, Firefox — doesn't matter) and go to:
+
+**http://localhost:3000**
+
+You should see the NewGen Realty AI dashboard. You're in.
 
 > **Mac/Linux?** Same steps but use `source venv/bin/activate` instead of `venv\Scripts\activate`, and `cp .env.example .env` instead of `copy`.
 
