@@ -69,8 +69,11 @@ SKIP_TRACE_API_KEY=
 Save and close notepad.
 
 ```bash
+# This starts the backend API server — keep this terminal open
+# --reload means it auto-restarts when you edit code
 uvicorn app.main:app --reload --port 8000
 ```
+You should see `Uvicorn running on http://127.0.0.1:8000` — that means it's working. **Keep this terminal open.**
 
 **Step 2 — Open a second terminal and start the frontend:**
 ```bash
