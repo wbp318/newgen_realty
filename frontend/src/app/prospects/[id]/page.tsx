@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect, scoreProspect, generateOutreachMessage } from "@/lib/api";
+import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect, scoreProspect, generateOutreachMessage, skipTraceProspect } from "@/lib/api";
 import type { Prospect } from "@/lib/types";
 import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -47,6 +47,7 @@ export default function ProspectDetailPage() {
   const [enriching, setEnriching] = useState(false);
   const [converting, setConverting] = useState(false);
   const [scoring, setScoring] = useState(false);
+  const [skipTracing, setSkipTracing] = useState(false);
   const [generatingOutreach, setGeneratingOutreach] = useState(false);
   const [generatedMessage, setGeneratedMessage] = useState<{ subject: string | null; body: string; compliance_flags: string[] } | null>(null);
 
@@ -109,6 +110,25 @@ export default function ProspectDetailPage() {
       alert(msg);
     } finally {
       setScoring(false);
+    }
+  }
+
+  async function handleSkipTrace() {
+    setSkipTracing(true);
+    try {
+      const res = await skipTraceProspect(id);
+      await loadProspect();
+      const data = res.data;
+      if (data.success) {
+        alert(`Found: ${data.phones.length} phone(s), ${data.emails.length} email(s). Prospect updated.`);
+      } else {
+        alert(data.message || "No results found. Consider using a paid skip trace provider.");
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Error running skip trace";
+      alert(msg);
+    } finally {
+      setSkipTracing(false);
     }
   }
 
@@ -372,6 +392,13 @@ export default function ProspectDetailPage() {
                 className="w-full text-sm bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {enriching ? "Enriching..." : "Enrich with ATTOM Data"}
+              </button>
+              <button
+                onClick={handleSkipTrace}
+                disabled={skipTracing}
+                className="w-full text-sm bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {skipTracing ? "Tracing..." : "Skip Trace (Find Contact Info)"}
               </button>
               <button
                 onClick={handleScore}

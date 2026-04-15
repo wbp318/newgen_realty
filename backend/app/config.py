@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     MAX_TOKENS_PROSPECT_SCORE: int = 1000
     MAX_TOKENS_OUTREACH: int = 800
     MAX_TOKENS_CAMPAIGN_INSIGHTS: int = 1500
+    # Skip tracing
+    SKIP_TRACE_PROVIDER: str = "free"
+    SKIP_TRACE_API_KEY: str = ""
     SUPPORTED_STATES: list[str] = ["LA", "AR", "MS"]
 
     class Config:

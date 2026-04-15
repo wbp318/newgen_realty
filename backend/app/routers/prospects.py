@@ -22,6 +22,9 @@ from app.schemas.prospect import (
     ProspectUpdate,
 )
 from app.services import prospect_data
+from app.services import skip_trace as skip_trace_service
+from app.services import county_data
+from app.services.compliance import validate_outreach_compliance
 
 router = APIRouter(prefix="/api/prospects", tags=["prospects"])
 
@@ -424,3 +427,184 @@ async def convert_to_contact(prospect_id: str, db: AsyncSession = Depends(get_db
     await db.commit()
 
     return contact
+
+
+# ---------------------------------------------------------------------------
+# Skip Trace — find contact info for a prospect
+# ---------------------------------------------------------------------------
+
+@router.post("/{prospect_id}/skip-trace")
+async def skip_trace_prospect(prospect_id: str, db: AsyncSession = Depends(get_db)):
+    """Run skip tracing to find phone/email for a prospect."""
+    result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
+    prospect = result.scalar_one_or_none()
+    if not prospect:
+        raise HTTPException(status_code=404, detail="Prospect not found")
+
+    trace_result = skip_trace_service.skip_trace_single(
+        first_name=prospect.first_name,
+        last_name=prospect.last_name,
+        address=prospect.property_address,
+        city=prospect.property_city,
+        state=prospect.property_state,
+        zip_code=prospect.property_zip,
+    )
+
+    # Update prospect with found contact info
+    updated = False
+    if trace_result.get("phones") and not prospect.phone:
+        best_phone = trace_result["phones"][0]
+        prospect.phone = best_phone["number"]
+        updated = True
+    if trace_result.get("emails") and not prospect.email:
+        best_email = trace_result["emails"][0]
+        prospect.email = best_email["address"]
+        updated = True
+    if trace_result.get("addresses") and not prospect.mailing_address:
+        best_addr = trace_result["addresses"][0]
+        prospect.mailing_address = best_addr["address"]
+        updated = True
+
+    if updated:
+        await db.commit()
+        await db.refresh(prospect)
+
+    activity = Activity(
+        activity_type="ai_action",
+        title=f"Skip trace: {'found data' if trace_result.get('success') else 'no results'}",
+        prospect_id=prospect_id,
+        extra_data={
+            "provider": trace_result.get("provider"),
+            "phones_found": len(trace_result.get("phones", [])),
+            "emails_found": len(trace_result.get("emails", [])),
+        },
+    )
+    db.add(activity)
+    await db.commit()
+
+    return trace_result
+
+
+@router.post("/batch-skip-trace")
+async def batch_skip_trace(prospect_ids: list[str], db: AsyncSession = Depends(get_db)):
+    """Batch skip trace for multiple prospects."""
+    result = await db.execute(select(Prospect).where(Prospect.id.in_(prospect_ids)))
+    prospects = result.scalars().all()
+
+    prospect_data_list = [
+        {
+            "id": p.id,
+            "first_name": p.first_name,
+            "last_name": p.last_name,
+            "property_address": p.property_address,
+            "property_city": p.property_city,
+            "property_state": p.property_state,
+            "property_zip": p.property_zip,
+        }
+        for p in prospects
+    ]
+
+    results = skip_trace_service.skip_trace_batch(prospect_data_list)
+
+    # Update prospects with found data
+    prospect_map = {p.id: p for p in prospects}
+    found_count = 0
+    for trace in results:
+        pid = trace.get("prospect_id")
+        if not pid or pid not in prospect_map:
+            continue
+        p = prospect_map[pid]
+        if trace.get("phones") and not p.phone:
+            p.phone = trace["phones"][0]["number"]
+            found_count += 1
+        if trace.get("emails") and not p.email:
+            p.email = trace["emails"][0]["address"]
+            found_count += 1
+
+    await db.commit()
+
+    activity = Activity(
+        activity_type="ai_action",
+        title=f"Batch skip trace: {len(prospects)} searched, {found_count} updated",
+    )
+    db.add(activity)
+    await db.commit()
+
+    return {"searched": len(prospects), "found": found_count, "results": results}
+
+
+# ---------------------------------------------------------------------------
+# Batch DNC Check
+# ---------------------------------------------------------------------------
+
+@router.post("/batch-dnc-check")
+async def batch_dnc_check(prospect_ids: list[str], db: AsyncSession = Depends(get_db)):
+    """Check DNC list status for multiple prospects."""
+    from datetime import datetime
+    from app.services.prospect_enrichment import check_dnc_list
+
+    result = await db.execute(select(Prospect).where(Prospect.id.in_(prospect_ids)))
+    prospects = result.scalars().all()
+
+    checked = 0
+    on_dnc = 0
+    now = datetime.utcnow()
+
+    for p in prospects:
+        if not p.phone:
+            continue
+        is_dnc = check_dnc_list(p.phone)
+        p.dnc_checked = True
+        p.dnc_checked_at = now
+        p.dnc_listed = is_dnc
+        checked += 1
+        if is_dnc:
+            on_dnc += 1
+
+    await db.commit()
+
+    activity = Activity(
+        activity_type="ai_action",
+        title=f"Batch DNC check: {checked} checked, {on_dnc} on DNC list",
+    )
+    db.add(activity)
+    await db.commit()
+
+    return {"checked": checked, "on_dnc_list": on_dnc, "skipped_no_phone": len(prospects) - checked}
+
+
+# ---------------------------------------------------------------------------
+# County Records Search — free supplementary data
+# ---------------------------------------------------------------------------
+
+@router.post("/search-county")
+async def search_county_records_endpoint(
+    state: str = Query(...),
+    county_parish: str = Query(...),
+    address: str | None = Query(None),
+    owner_name: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Search free county/parish public record portals."""
+    results = county_data.search_county_records(
+        state=state,
+        county_parish=county_parish,
+        address=address,
+        owner_name=owner_name,
+    )
+
+    return {
+        "records": results,
+        "count": len(results),
+        "source": f"county_{state.lower()}_{county_parish.lower().replace(' ', '_')}",
+    }
+
+
+@router.get("/county-sources")
+async def list_county_sources():
+    """List available county/parish data sources by state."""
+    return {
+        "LA": county_data.get_supported_counties("LA"),
+        "AR": county_data.get_supported_counties("AR"),
+        "MS": county_data.get_supported_counties("MS"),
+    }

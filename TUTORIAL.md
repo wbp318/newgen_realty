@@ -410,4 +410,53 @@ The `parish` column in the database stores parish (LA) or county (AR/MS). The fr
 
 ---
 
-*Tutorial last updated: Phase 2 complete — AI scoring + outreach generation fully implemented.*
+---
+
+## 8. Phase 4: Additional Data Sources, Skip Tracing, Batch Operations
+
+### County Portal Data Service (`services/county_data.py`)
+
+Supplements ATTOM with free public record lookups:
+- **Louisiana**: Parish assessor portals (Prior Inc platform for Ouachita, Rapides, Lincoln, etc.)
+- **Arkansas**: ARCountyData.com (all 75 counties)
+- **Mississippi**: County chancery clerk portals (framework ready, specific parsers per county)
+
+Unified `search_county_records(state, county_parish, address, owner_name)` dispatches to state-specific search functions. These are HTML parsers, not formal APIs — results vary by county.
+
+### Skip Tracing Service (`services/skip_trace.py`)
+
+Pluggable architecture for finding phone/email/address for prospects:
+- **Default**: "free" provider (stub — returns no data but framework is ready)
+- **BatchSkipTracing.com**: Full integration (~$0.15/record) — just set `SKIP_TRACE_PROVIDER=batchskiptracing` and `SKIP_TRACE_API_KEY`
+- **Extensible**: Add new providers by implementing a `_provider_skip_trace()` function
+
+Returns standardized format: `{phones: [{number, type, confidence}], emails: [{address, confidence}], addresses: [{address, type}]}`
+
+### Batch Operations
+
+New endpoints for operating on multiple prospects at once:
+```
+POST /api/prospects/batch-skip-trace     — Find contact info for multiple prospects
+POST /api/prospects/batch-dnc-check      — Check DNC list for all prospects with phone numbers
+POST /api/prospects/search-county        — Search free county portals
+GET  /api/prospects/county-sources       — List available county data sources
+POST /api/prospects/{id}/skip-trace      — Skip trace a single prospect
+```
+
+### Frontend Bulk Actions
+
+**Prospects list page** (`/prospects`) now has three bulk action buttons:
+- **Bulk Score** — AI-scores all unscored prospects
+- **DNC Check** — Checks DNC list for all prospects with unchecked phone numbers
+- **Skip Trace** — Runs skip tracing for all prospects missing contact info
+
+**Prospect detail page** (`/prospects/[id]`) gains a **Skip Trace** button in Quick Actions.
+
+### Environment Variables (Phase 4)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SKIP_TRACE_PROVIDER` | No | `free` | Skip trace provider (`free`, `batchskiptracing`) |
+| `SKIP_TRACE_API_KEY` | No | — | API key for paid skip trace provider |
+
+*Tutorial last updated: Phase 4 complete — county data, skip tracing, and batch operations.*

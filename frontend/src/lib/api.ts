@@ -87,6 +87,13 @@ export const convertProspect = (id: string) =>
   api.post(`/api/prospects/${id}/convert`);
 export const getAttomStatus = () => api.get("/api/prospects/status");
 
+export const skipTraceProspect = (id: string) =>
+  api.post(`/api/prospects/${id}/skip-trace`);
+export const batchSkipTrace = (prospectIds: string[]) =>
+  api.post("/api/prospects/batch-skip-trace", prospectIds);
+export const batchDncCheck = (prospectIds: string[]) =>
+  api.post("/api/prospects/batch-dnc-check", prospectIds);
+
 // Prospect Lists
 export const getProspectLists = () => api.get("/api/prospects/lists");
 export const createProspectList = (data: Record<string, unknown>) =>

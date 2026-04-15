@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getProspects, deleteProspect, getAttomStatus } from "@/lib/api";
+import { getProspects, deleteProspect, getAttomStatus, bulkScoreProspects, batchDncCheck, batchSkipTrace } from "@/lib/api";
 import type { Prospect } from "@/lib/types";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
@@ -64,6 +64,7 @@ export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [attomConfigured, setAttomConfigured] = useState<boolean | null>(null);
+  const [bulkAction, setBulkAction] = useState(false);
 
   useEffect(() => {
     loadProspects();
@@ -96,6 +97,44 @@ export default function ProspectsPage() {
     loadProspects();
   }
 
+  async function handleBulkScore() {
+    const unscored = prospects.filter((p) => p.ai_prospect_score === null).map((p) => p.id);
+    if (unscored.length === 0) { alert("All prospects already scored."); return; }
+    if (!confirm(`Score ${unscored.length} unscored prospects? This uses AI credits.`)) return;
+    setBulkAction(true);
+    try {
+      const res = await bulkScoreProspects(unscored);
+      alert(`Scored ${res.data.results.length} prospects. Average: ${res.data.average_score}`);
+      loadProspects();
+    } catch { alert("Error during bulk scoring."); }
+    finally { setBulkAction(false); }
+  }
+
+  async function handleBulkDnc() {
+    const withPhone = prospects.filter((p) => p.phone && !p.dnc_checked).map((p) => p.id);
+    if (withPhone.length === 0) { alert("No unchecked prospects with phone numbers."); return; }
+    setBulkAction(true);
+    try {
+      const res = await batchDncCheck(withPhone);
+      alert(`Checked ${res.data.checked} numbers. ${res.data.on_dnc_list} on DNC list.`);
+      loadProspects();
+    } catch { alert("Error during DNC check."); }
+    finally { setBulkAction(false); }
+  }
+
+  async function handleBulkSkipTrace() {
+    const noContact = prospects.filter((p) => !p.phone && !p.email).map((p) => p.id);
+    if (noContact.length === 0) { alert("All prospects have contact info."); return; }
+    if (!confirm(`Skip trace ${noContact.length} prospects without contact info?`)) return;
+    setBulkAction(true);
+    try {
+      const res = await batchSkipTrace(noContact);
+      alert(`Searched ${res.data.searched}. Updated ${res.data.found} with new contact info.`);
+      loadProspects();
+    } catch { alert("Error during skip tracing."); }
+    finally { setBulkAction(false); }
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -112,6 +151,19 @@ export default function ProspectsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {prospects.length > 0 && (
+            <>
+              <button onClick={handleBulkScore} disabled={bulkAction} className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50">
+                {bulkAction ? "..." : "Bulk Score"}
+              </button>
+              <button onClick={handleBulkDnc} disabled={bulkAction} className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50">
+                DNC Check
+              </button>
+              <button onClick={handleBulkSkipTrace} disabled={bulkAction} className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50">
+                Skip Trace
+              </button>
+            </>
+          )}
           <Link href="/prospects/search" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
             Search Public Records
           </Link>
