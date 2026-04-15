@@ -43,37 +43,41 @@ git --version       # Should show 2.x+
 
 You can add any of these later — the platform works without them, you just won't have access to those specific features.
 
-**Step 1 — Download the code.** Open **Command Prompt** (search "cmd" in the Start menu — NOT PowerShell). Navigate to your Documents folder:
-```cmd
-cd C:\Users\%USERNAME%\Documents
+**Step 1 — Download the code.** Open **PowerShell** (search "PowerShell" in the Start menu). Navigate to your Documents folder:
+```powershell
+cd $HOME\Documents
 ```
-> **Not sure of your username?** Type `echo %USERNAME%` and it'll show you. Or just open File Explorer, go to Documents, and look at the path bar at the top.
 Now download the project:
-```bash
+```powershell
 git clone https://github.com/wbp318/newgen_realty.git
 ```
 This creates a folder at `C:\Users\YourName\Documents\newgen_realty` with all the code. Now navigate into the backend folder:
-```bash
+```powershell
 cd newgen_realty\backend
 ```
 
 **Step 2 — Set up the Python environment.** Run these one at a time:
-```bash
+```powershell
 python -m venv venv
 ```
 This creates an isolated Python environment. Now activate it:
-```bash
-venv\Scripts\activate
+```powershell
+venv\Scripts\Activate.ps1
 ```
+> **Getting a red error about "execution policy"?** Run this first, then try again:
+> ```powershell
+> Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+> ```
+
 You should see `(venv)` appear at the start of your command line. That means you're inside the virtual environment. Now install the dependencies:
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 This will download and install about 30 packages. Wait for it to finish (you'll see "Successfully installed..." at the end).
 
 **Step 3 — Set up the API key.** Run:
-```bash
-copy .env.example .env
+```powershell
+Copy-Item .env.example .env
 notepad .env
 ```
 This opens notepad with the config file. **Delete everything in the file** and replace it with this (paste your real API key on the first line):
@@ -91,8 +95,8 @@ SKIP_TRACE_API_KEY=
 
 Now **save the file** (Ctrl+S) and **close notepad** (click the X or Alt+F4).
 
-**Step 4 — Start the backend.** Back in your terminal (the one that still shows `(venv)`), run:
-```bash
+**Step 4 — Start the backend.** Back in your PowerShell window (the one that still shows `(venv)`), run:
+```powershell
 uvicorn app.main:app --reload --port 8000
 ```
 Wait a few seconds. You should see something like:
@@ -102,13 +106,13 @@ INFO:     Application startup complete.
 ```
 That means the backend is running. **Do NOT close this terminal — leave it running.**
 
-**Step 5 — Open a NEW Command Prompt window** (search "cmd" in Start menu again). In this new window, navigate to the frontend folder:
-```cmd
-cd C:\Users\%USERNAME%\Documents\newgen_realty\frontend
+**Step 5 — Open a NEW PowerShell window** (right-click PowerShell in taskbar → "New Window", or search "PowerShell" in Start menu again). In this new window, navigate to the frontend folder:
+```powershell
+cd $HOME\Documents\newgen_realty\frontend
 npm install
 ```
 This installs the frontend dependencies (takes 30-60 seconds). When it's done, run:
-```bash
+```powershell
 npm run dev
 ```
 Wait a few seconds. You should see:
