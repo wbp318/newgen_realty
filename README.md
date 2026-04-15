@@ -4,6 +4,21 @@ AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives 
 
 **The gap it fills:** No existing tool combines public record lead generation + AI motivation scoring + AI-personalized outreach + campaign tracking + CRM in one platform. Agents currently pay $300+/month across 5-8 separate tools (PropStream, BatchLeads, Follow Up Boss, ChatGPT, Mailchimp, etc.) and manually copy-paste between them. NewGen replaces that entire stack.
 
+## Compliance Flags — Quick Reference
+
+When you generate outreach, the system checks TCPA compliance and shows flags. **Violations carry fines up to $1,500 each.**
+
+| Flag | What It Means | What You Can Do | How to Fix |
+|------|--------------|-----------------|------------|
+| `no_consent` | No written consent to call/text/email | **Send a letter** (no consent needed — First Amendment) | Include response card in letter to obtain consent |
+| `on_dnc_list` | Phone number is on the Do Not Call Registry | **Letters and email only** — never call or text | Cannot be removed — use non-phone channels |
+| `pending_opt_out` | They requested no contact, processing in progress | **Do not contact** until 10 business days pass | Wait for processing window to close |
+| `do_not_contact` | Permanently blocked from all outreach | **Nothing — hard block** | Only reverse if set in error |
+| `no_contact_info` | No phone, email, or mailing address on file | **Skip trace** to find contact info | Click "Skip Trace" or "Enrich with ATTOM Data" |
+| `outside_contact_hours` | Current time is before 8am or after 9pm recipient time | **Save as draft**, send during business hours | Wait until 8:00 AM their timezone |
+
+No flags = **"Clear"** in green — safe to send via any channel. **[Full TCPA compliance reference →](COMPLIANCE.md)**
+
 ## Features
 
 ### AI Prospecting Engine
@@ -443,6 +458,7 @@ frontend/
 |------|----------|
 | `WALKTHROUGH.md` | Step-by-step guide to using every feature |
 | `GUIDE.md` | Complete reference: terms, statuses, workflows, scoring, compliance, multi-state |
+| `COMPLIANCE.md` | Full TCPA compliance reference: every flag explained, consent rules, DNC, opt-out processing, contact hours, common scenarios |
 | `TUTORIAL.md` | Technical build tutorial for developers |
 | `CLAUDE.md` | Architecture guide for Claude Code AI assistant |
 
