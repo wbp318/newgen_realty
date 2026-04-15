@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "NewGen Realty AI",
-  description: "AI-powered real estate platform for Louisiana",
+  description: "AI-powered real estate platform for Louisiana, Arkansas, and Mississippi",
 };
 
 export default function RootLayout({

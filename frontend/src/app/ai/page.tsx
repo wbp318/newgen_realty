@@ -261,7 +261,7 @@ export default function AIAssistantPage() {
       <div className="flex-1 bg-white rounded-xl shadow-sm flex flex-col">
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold text-gray-900">AI Assistant</h1>
-          <p className="text-sm text-gray-500">Your Louisiana real estate AI — powered by Claude</p>
+          <p className="text-sm text-gray-500">Your LA, AR, and MS real estate AI — powered by Claude</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -269,7 +269,7 @@ export default function AIAssistantPage() {
             <div className="text-center text-gray-400 mt-20">
               <p className="text-4xl mb-4">🏠</p>
               <p className="text-lg font-medium">NewGen Realty AI</p>
-              <p className="text-sm mt-2">Ask me anything about Louisiana real estate, or use the quick actions on the left.</p>
+              <p className="text-sm mt-2">Ask me anything about real estate in Louisiana, Arkansas, or Mississippi.</p>
             </div>
           )}
           {messages.map((msg, i) => (
@@ -303,7 +303,7 @@ export default function AIAssistantPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about Louisiana real estate..."
+              placeholder="Ask about LA, AR, or MS real estate..."
               className="flex-1 border rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               disabled={loading}
             />
