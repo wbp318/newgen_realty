@@ -23,12 +23,15 @@ from app.schemas.ai import (
 )
 from app.schemas.ai import CompData
 from app.schemas.market_data import AutoCompAnalysisRequest
+from app.models.prospect import Prospect
+from app.schemas.prospect import ProspectScoreRequest, ProspectScoreResponse, BulkScoreRequest, BulkScoreResponse
 from app.services.ai_assistant import assistant
 from app.services.comm_drafter import draft_communication
 from app.services.comp_analyzer import analyze_comps
 from app.services.lead_scorer import score_lead
 from app.services.listing_generator import generate_listing
 from app.services.property_matcher import match_properties
+from app.services.prospect_scorer import score_prospect
 from app.services import market_data
 from app.prompts.system_prompts import DASHBOARD_INSIGHTS_SYSTEM
 from app.prompts.templates import DASHBOARD_INSIGHTS_TEMPLATE
@@ -219,6 +222,111 @@ async def ai_match_properties(request: PropertyMatchRequest, db: AsyncSession = 
             for m in matches
         ],
     )
+
+
+@router.post("/score-prospect", response_model=ProspectScoreResponse)
+async def ai_score_prospect(request: ProspectScoreRequest, db: AsyncSession = Depends(get_db)):
+    """AI-score a single prospect based on motivation signals."""
+    result = await db.execute(select(Prospect).where(Prospect.id == request.prospect_id))
+    prospect = result.scalar_one_or_none()
+    if not prospect:
+        raise HTTPException(status_code=404, detail="Prospect not found")
+
+    prospect_data = {
+        "first_name": prospect.first_name,
+        "last_name": prospect.last_name,
+        "property_address": prospect.property_address,
+        "property_city": prospect.property_city,
+        "property_parish": prospect.property_parish,
+        "property_state": prospect.property_state,
+        "property_zip": prospect.property_zip,
+        "prospect_type": prospect.prospect_type,
+        "mailing_address": prospect.mailing_address,
+        "property_data": prospect.property_data or {},
+        "motivation_signals": prospect.motivation_signals or {},
+    }
+
+    # Run scoring (sync — FastAPI runs in threadpool)
+    score_result = score_prospect(prospect_data)
+
+    # Update prospect with score
+    prospect.ai_prospect_score = score_result["score"]
+    prospect.ai_prospect_score_reason = score_result["reason"]
+    prospect.ai_scored_at = datetime.utcnow()
+    await db.commit()
+
+    # Log activity
+    activity = Activity(
+        activity_type="ai_action",
+        title=f"AI Prospect Score: {score_result['score']}/100",
+        description=score_result["reason"],
+        prospect_id=request.prospect_id,
+    )
+    db.add(activity)
+    await db.commit()
+
+    return ProspectScoreResponse(
+        prospect_id=request.prospect_id,
+        score=score_result["score"],
+        reason=score_result["reason"],
+        motivation_level=score_result["motivation_level"],
+        suggested_approach=score_result.get("suggested_approach"),
+        suggested_outreach_type=score_result.get("suggested_outreach_type"),
+    )
+
+
+@router.post("/bulk-score-prospects", response_model=BulkScoreResponse)
+async def ai_bulk_score_prospects(request: BulkScoreRequest, db: AsyncSession = Depends(get_db)):
+    """AI-score multiple prospects."""
+    results = []
+    for prospect_id in request.prospect_ids:
+        result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
+        prospect = result.scalar_one_or_none()
+        if not prospect:
+            continue
+
+        prospect_data = {
+            "first_name": prospect.first_name,
+            "last_name": prospect.last_name,
+            "property_address": prospect.property_address,
+            "property_city": prospect.property_city,
+            "property_parish": prospect.property_parish,
+            "property_state": prospect.property_state,
+            "property_zip": prospect.property_zip,
+            "prospect_type": prospect.prospect_type,
+            "mailing_address": prospect.mailing_address,
+            "property_data": prospect.property_data or {},
+            "motivation_signals": prospect.motivation_signals or {},
+        }
+
+        score_result = score_prospect(prospect_data)
+
+        prospect.ai_prospect_score = score_result["score"]
+        prospect.ai_prospect_score_reason = score_result["reason"]
+        prospect.ai_scored_at = datetime.utcnow()
+
+        results.append(ProspectScoreResponse(
+            prospect_id=prospect_id,
+            score=score_result["score"],
+            reason=score_result["reason"],
+            motivation_level=score_result["motivation_level"],
+            suggested_approach=score_result.get("suggested_approach"),
+            suggested_outreach_type=score_result.get("suggested_outreach_type"),
+        ))
+
+    await db.commit()
+
+    avg_score = sum(r.score for r in results) / len(results) if results else 0
+
+    # Log activity
+    activity = Activity(
+        activity_type="ai_action",
+        title=f"Bulk prospect scoring: {len(results)} scored, avg {avg_score:.0f}",
+    )
+    db.add(activity)
+    await db.commit()
+
+    return BulkScoreResponse(results=results, average_score=round(avg_score, 1))
 
 
 @router.get("/dashboard-insights", response_model=DashboardInsightsResponse)

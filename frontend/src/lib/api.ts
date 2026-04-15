@@ -96,7 +96,13 @@ export const getProspectList = (id: string) =>
 export const updateProspectList = (id: string, data: Record<string, unknown>) =>
   api.put(`/api/prospects/lists/${id}`, data);
 
-// Outreach Campaigns (Phase 2 — endpoints not yet built)
+// AI Prospect Scoring
+export const scoreProspect = (prospectId: string) =>
+  api.post("/api/ai/score-prospect", { prospect_id: prospectId });
+export const bulkScoreProspects = (prospectIds: string[]) =>
+  api.post("/api/ai/bulk-score-prospects", { prospect_ids: prospectIds });
+
+// Outreach Campaigns
 export const getOutreachCampaigns = (params?: Record<string, string | number>) =>
   api.get("/api/outreach/campaigns", { params });
 export const createOutreachCampaign = (data: Record<string, unknown>) =>

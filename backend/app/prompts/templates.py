@@ -113,6 +113,87 @@ SCORE: [0-100]
 REASON: [why this matches or doesn't match well]
 """
 
+PROSPECT_SCORING_TEMPLATE = """Score this real estate prospect from 0-100 based on their likelihood of selling.
+
+## Property
+- Address: {property_address}
+- City: {property_city}, {county_parish_label}: {property_parish}, {property_state}
+- Year Built: {year_built}
+- SqFt: {sqft}
+- Bedrooms/Bathrooms: {bedrooms}/{bathrooms}
+
+## Owner
+- Name: {owner_name}
+- Mailing Address: {mailing_address}
+- Ownership Duration: {ownership_years} years
+- Last Sale Price: {last_sale_price}
+- Last Sale Date: {last_sale_date}
+
+## Valuation
+- Assessed Value: {assessed_value}
+- Estimated Market Value (AVM): {avm_value}
+- Estimated Equity: {estimated_equity}
+
+## Motivation Signals
+- Prospect Type: {prospect_type}
+- Signals: {signals_summary}
+
+## Local Market Context
+{market_context}
+
+Score this prospect and explain your reasoning.
+"""
+
+OUTREACH_TEMPLATE = """Draft a {medium} for a real estate agent reaching out to a property owner.
+
+## Prospect Profile
+- **Owner Name:** {owner_name}
+- **Prospect Type:** {prospect_type}
+- **Property Address:** {property_address}, {property_city}, {property_state}
+- **Key Motivation Signal:** {key_signal}
+
+## Property Details
+- Estimated Value: {estimated_value}
+- Ownership Duration: {ownership_years} years
+- Equity Position: {equity_position}
+
+## Context
+{context}
+
+## Instructions
+- Tone: {tone}
+- Medium: {medium}
+{medium_instructions}
+"""
+
+OUTREACH_MEDIUM_INSTRUCTIONS = {
+    "email": "Provide a subject line and email body. Format as:\nSUBJECT: [subject]\nBODY: [email body]",
+    "text": "Provide a text message. Keep under 300 characters. Format as:\nBODY: [text message]",
+    "letter": "Provide a full letter. Include greeting and sign-off. Format as:\nBODY: [full letter text]",
+}
+
+CAMPAIGN_INSIGHTS_TEMPLATE = """Analyze this outreach campaign and provide optimization suggestions.
+
+## Campaign: {campaign_name}
+- Type: {campaign_type}
+- Status: {campaign_status}
+
+## Metrics
+- Total Messages: {total_messages}
+- Sent: {sent_count}
+- Delivered: {delivered_count}
+- Opened: {opened_count} ({open_rate}%)
+- Replied: {replied_count} ({reply_rate}%)
+
+## Breakdown by Prospect Type
+{type_breakdown}
+
+## Breakdown by Medium
+{medium_breakdown}
+
+Analyze performance and provide actionable suggestions.
+"""
+
 DASHBOARD_INSIGHTS_TEMPLATE = """Analyze this real estate portfolio and generate actionable insights.
 
 ## Portfolio Summary

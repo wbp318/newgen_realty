@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect } from "@/lib/api";
+import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect, scoreProspect, generateOutreachMessage } from "@/lib/api";
 import type { Prospect } from "@/lib/types";
 import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -46,6 +46,9 @@ export default function ProspectDetailPage() {
   const [saving, setSaving] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [scoring, setScoring] = useState(false);
+  const [generatingOutreach, setGeneratingOutreach] = useState(false);
+  const [generatedMessage, setGeneratedMessage] = useState<{ subject: string | null; body: string; compliance_flags: string[] } | null>(null);
 
   useEffect(() => {
     loadProspect();
@@ -92,6 +95,40 @@ export default function ProspectDetailPage() {
       alert(msg);
     } finally {
       setEnriching(false);
+    }
+  }
+
+  async function handleScore() {
+    setScoring(true);
+    try {
+      const res = await scoreProspect(id);
+      await loadProspect();
+      alert(`Prospect Score: ${res.data.score}/100 (${res.data.motivation_level})\n\n${res.data.reason}${res.data.suggested_approach ? `\n\nApproach: ${res.data.suggested_approach}` : ""}`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Error scoring prospect";
+      alert(msg);
+    } finally {
+      setScoring(false);
+    }
+  }
+
+  async function handleGenerateOutreach(medium: string = "email") {
+    setGeneratingOutreach(true);
+    setGeneratedMessage(null);
+    try {
+      // Use a placeholder campaign ID — in full flow this comes from a real campaign
+      const res = await generateOutreachMessage({
+        campaign_id: "direct-outreach",
+        prospect_id: id,
+        medium,
+        tone: "professional",
+      });
+      setGeneratedMessage(res.data);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Error generating outreach";
+      alert(msg);
+    } finally {
+      setGeneratingOutreach(false);
     }
   }
 
@@ -337,19 +374,35 @@ export default function ProspectDetailPage() {
                 {enriching ? "Enriching..." : "Enrich with ATTOM Data"}
               </button>
               <button
-                disabled
-                className="w-full text-sm bg-emerald-600 text-white px-3 py-2 rounded-lg opacity-50 cursor-not-allowed"
-                title="Coming in Phase 2"
+                onClick={handleScore}
+                disabled={scoring}
+                className="w-full text-sm bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
               >
-                Score Prospect (Phase 2)
+                {scoring ? "Scoring..." : prospect.ai_prospect_score !== null ? "Rescore Prospect" : "Score Prospect"}
               </button>
-              <button
-                disabled
-                className="w-full text-sm bg-purple-600 text-white px-3 py-2 rounded-lg opacity-50 cursor-not-allowed"
-                title="Coming in Phase 2"
-              >
-                Generate Outreach (Phase 2)
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => handleGenerateOutreach("email")}
+                  disabled={generatingOutreach}
+                  className="flex-1 text-sm bg-purple-600 text-white px-2 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {generatingOutreach ? "..." : "Email"}
+                </button>
+                <button
+                  onClick={() => handleGenerateOutreach("letter")}
+                  disabled={generatingOutreach}
+                  className="flex-1 text-sm bg-purple-600 text-white px-2 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  Letter
+                </button>
+                <button
+                  onClick={() => handleGenerateOutreach("text")}
+                  disabled={generatingOutreach}
+                  className="flex-1 text-sm bg-purple-600 text-white px-2 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  Text
+                </button>
+              </div>
               <button
                 onClick={handleConvert}
                 disabled={converting || prospect.status === "converted"}
@@ -364,6 +417,30 @@ export default function ProspectDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Generated Outreach */}
+          {generatedMessage && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Generated Outreach</h2>
+              {generatedMessage.compliance_flags.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-800">
+                  Compliance flags: {generatedMessage.compliance_flags.join(", ")}
+                </div>
+              )}
+              {generatedMessage.subject && (
+                <div className="mb-2">
+                  <span className="text-xs text-gray-500">Subject</span>
+                  <p className="text-sm font-medium text-gray-900">{generatedMessage.subject}</p>
+                </div>
+              )}
+              <div>
+                <span className="text-xs text-gray-500">Body</span>
+                <div className="mt-1 text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                  {generatedMessage.body}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Meta Info */}
           <div className="bg-white rounded-xl shadow-sm p-6">

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import properties, contacts, ai, activities, conversations, market_data, prospects
+from app.routers import properties, contacts, ai, activities, conversations, market_data, prospects, outreach
 
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.include_router(activities.router)
 app.include_router(conversations.router)
 app.include_router(market_data.router)
 app.include_router(prospects.router)
+app.include_router(outreach.router)
 
 
 @app.get("/api/health")
