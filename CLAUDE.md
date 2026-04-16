@@ -32,6 +32,12 @@ cd backend && python -c "import ast, os; [ast.parse(open(os.path.join(r,f)).read
 # Windows convenience scripts
 start.bat   # starts both backend + frontend (auto-creates venv, installs deps)
 stop.bat    # stops both
+
+# Run pentest suite (backend must be running)
+cd pentest && pip install -r requirements.txt
+python run_all.py                                    # all tests
+python test_input_validation.py                      # single suite
+python run_all.py --base-url http://other:8000       # remote target
 ```
 
 Backend: http://localhost:8000 | Frontend: http://localhost:3000 | API Docs: http://localhost:8000/docs
@@ -110,6 +116,11 @@ Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot le
 - AI chat auto-persists conversations to the Conversation model with auto-titling from first message
 - Prospect scoring, outreach generation, and campaign insights use Sonnet; chat and dashboard use Haiku
 - All labels must reference LA, AR, and MS — never "Louisiana only"
+- Error responses must never leak raw exception details — return generic messages (e.g., "API error. Please try again later."), not `f"Error: {e}"`
+- Batch endpoints must enforce size limits via Pydantic `Field(max_length=N)` or `Body(max_length=N)`
+- Text search query params must have `max_length=100`
+- No authentication yet — see `SECURITY.md` for pre-production checklist
+- Pentest suite in `pentest/` — run after any security-related changes. Auth/IDOR tests auto-skip until auth is implemented.
 
 ## Environment Variables
 
