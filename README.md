@@ -4,6 +4,30 @@ AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives 
 
 **The gap it fills:** No existing tool combines public record lead generation + AI motivation scoring + AI-personalized outreach + campaign tracking + CRM in one platform. Agents currently pay $300+/month across 5-8 separate tools (PropStream, BatchLeads, Follow Up Boss, ChatGPT, Mailchimp, etc.) and manually copy-paste between them. NewGen replaces that entire stack.
 
+## What It Replaces
+
+| What agents do today | Tool they use | Cost/month | What NewGen does instead |
+|---|---|---|---|
+| Find motivated sellers | PropStream | $99 | ATTOM search + county portals, built in |
+| Find contact info | BatchLeads | $99 | Skip tracing service (pluggable providers) |
+| CRM + pipeline | Follow Up Boss | $69 | Contacts, prospects, activities, lead scoring |
+| Write outreach | ChatGPT (copy-paste) | $20 | AI-personalized per prospect type + situation |
+| Track campaigns | Mailchimp / spreadsheet | $0-50 | Campaign management with message tracking |
+| Market analysis | MLS + manual | $0 | AI + Realty Mole real market data |
+| Compliance checking | Manual / hope | $0 | TCPA baked into every outreach action |
+| **Total** | | **$300+/month** | **One platform** |
+
+## Documentation
+
+| File | Contents |
+|------|----------|
+| `WALKTHROUGH.md` | Step-by-step guide to using every feature |
+| `GUIDE.md` | Complete reference: terms, statuses, workflows, scoring, compliance, multi-state |
+| `COMPLIANCE.md` | Full TCPA compliance reference: every flag explained, consent rules, DNC, opt-out processing, contact hours, common scenarios |
+| `IP_PROTECTION.md` | IP protection plan: copyright, trademark, patent, LLC, notarization |
+| `TUTORIAL.md` | Technical build tutorial for developers |
+| `CLAUDE.md` | Architecture guide for Claude Code AI assistant |
+
 ---
 
 ## Quickstart — Windows (Get Running in 2 Minutes)
@@ -575,29 +599,6 @@ frontend/
 | `MAX_TOKENS_PROSPECT_SCORE` | No | `1000` | Max tokens for prospect scoring |
 | `MAX_TOKENS_OUTREACH` | No | `800` | Max tokens for outreach generation |
 | `MAX_TOKENS_CAMPAIGN_INSIGHTS` | No | `1500` | Max tokens for campaign analytics |
-
-## What It Replaces
-
-| What agents do today | Tool they use | Cost/month | What NewGen does instead |
-|---|---|---|---|
-| Find motivated sellers | PropStream | $99 | ATTOM search + county portals, built in |
-| Find contact info | BatchLeads | $99 | Skip tracing service (pluggable providers) |
-| CRM + pipeline | Follow Up Boss | $69 | Contacts, prospects, activities, lead scoring |
-| Write outreach | ChatGPT (copy-paste) | $20 | AI-personalized per prospect type + situation |
-| Track campaigns | Mailchimp / spreadsheet | $0-50 | Campaign management with message tracking |
-| Market analysis | MLS + manual | $0 | AI + Realty Mole real market data |
-| Compliance checking | Manual / hope | $0 | TCPA baked into every outreach action |
-| **Total** | | **$300+/month** | **One platform** |
-
-## Documentation
-
-| File | Contents |
-|------|----------|
-| `WALKTHROUGH.md` | Step-by-step guide to using every feature |
-| `GUIDE.md` | Complete reference: terms, statuses, workflows, scoring, compliance, multi-state |
-| `COMPLIANCE.md` | Full TCPA compliance reference: every flag explained, consent rules, DNC, opt-out processing, contact hours, common scenarios |
-| `TUTORIAL.md` | Technical build tutorial for developers |
-| `CLAUDE.md` | Architecture guide for Claude Code AI assistant |
 
 ## License
 
