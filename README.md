@@ -1,5 +1,11 @@
 # NewGen Realty AI
 
+AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives a solo agent the tools of a full brokerage — AI prospecting from public records, AI-scored leads, personalized outreach, listing generation, comp analysis, lead scoring, property matching, and a smart dashboard — all tuned for the unique markets of LA, AR, and MS.
+
+**The gap it fills:** No existing tool combines public record lead generation + AI motivation scoring + AI-personalized outreach + campaign tracking + CRM in one platform. Agents currently pay $300+/month across 5-8 separate tools (PropStream, BatchLeads, Follow Up Boss, ChatGPT, Mailchimp, etc.) and manually copy-paste between them. NewGen replaces that entire stack.
+
+---
+
 ## Quickstart — Windows (Get Running in 2 Minutes)
 
 **Step 0 — Install prerequisites (open PowerShell as Administrator):**
@@ -134,10 +140,6 @@ You should see the NewGen Realty AI dashboard. You're in.
 > **Only thing required:** An Anthropic API key. Everything else (ATTOM, Realty Mole, skip tracing) is optional and unlocks extra features.
 
 ---
-
-AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives a solo agent the tools of a full brokerage — AI prospecting from public records, AI-scored leads, personalized outreach, listing generation, comp analysis, lead scoring, property matching, and a smart dashboard — all tuned for the unique markets of LA, AR, and MS.
-
-**The gap it fills:** No existing tool combines public record lead generation + AI motivation scoring + AI-personalized outreach + campaign tracking + CRM in one platform. Agents currently pay $300+/month across 5-8 separate tools (PropStream, BatchLeads, Follow Up Boss, ChatGPT, Mailchimp, etc.) and manually copy-paste between them. NewGen replaces that entire stack.
 
 ## Compliance Flags — Quick Reference
 
