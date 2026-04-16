@@ -1,9 +1,11 @@
+# Docker Compose — local development only
+# For production: use strong passwords, external database, and HTTPS
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: newgen
-      POSTGRES_PASSWORD: newgen
+      POSTGRES_PASSWORD: newgen          # CHANGE THIS for production
       POSTGRES_DB: newgen_realty
     ports:
       - "5432:5432"
