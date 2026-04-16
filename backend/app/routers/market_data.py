@@ -31,7 +31,7 @@ def search_comps(request: MarketCompRequest):
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Market data API error: {e}")
+        raise HTTPException(status_code=502, detail="Market data API error. Please try again later.")
 
 
 @router.post("/property", response_model=PropertyLookupResponse)
@@ -42,4 +42,4 @@ def lookup_property(request: PropertyLookupRequest):
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Market data API error: {e}")
+        raise HTTPException(status_code=502, detail="Market data API error. Please try again later.")

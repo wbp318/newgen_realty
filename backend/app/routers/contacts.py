@@ -17,7 +17,7 @@ async def list_contacts(
     contact_type: Optional[str] = Query(None),
     source: Optional[str] = Query(None),
     min_score: Optional[float] = Query(None, description="Minimum AI lead score"),
-    q: Optional[str] = Query(None, description="Text search across name and email"),
+    q: Optional[str] = Query(None, max_length=100, description="Text search across name and email"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProspectCreate(BaseModel):
@@ -120,7 +120,7 @@ class ProspectScoreResponse(BaseModel):
 
 
 class BulkScoreRequest(BaseModel):
-    prospect_ids: list[str]
+    prospect_ids: list[str] = Field(..., max_length=50)
 
 
 class BulkScoreResponse(BaseModel):

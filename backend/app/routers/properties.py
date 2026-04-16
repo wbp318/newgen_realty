@@ -14,15 +14,15 @@ router = APIRouter(prefix="/api/properties", tags=["properties"])
 
 @router.get("", response_model=list[PropertyResponse])
 async def list_properties(
-    parish: Optional[str] = Query(None),
-    state: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    property_type: Optional[str] = Query(None),
+    parish: Optional[str] = Query(None, max_length=100),
+    state: Optional[str] = Query(None, max_length=2),
+    status: Optional[str] = Query(None, max_length=20),
+    property_type: Optional[str] = Query(None, max_length=20),
     min_price: Optional[int] = Query(None),
     max_price: Optional[int] = Query(None),
     bedrooms: Optional[int] = Query(None),
-    city: Optional[str] = Query(None),
-    q: Optional[str] = Query(None, description="Text search across address and city"),
+    city: Optional[str] = Query(None, max_length=100),
+    q: Optional[str] = Query(None, max_length=100, description="Text search across address and city"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),

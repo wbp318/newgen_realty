@@ -1,7 +1,8 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from pydantic import Field
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -157,7 +158,7 @@ async def search_prospects(
     try:
         raw_prospects = func(**kwargs)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"ATTOM API error: {e}")
+        raise HTTPException(status_code=502, detail="ATTOM API error. Please try again later.")
 
     # Deduplicate — skip prospects whose property_address already exists
     existing_result = await db.execute(
@@ -222,7 +223,7 @@ async def list_prospects(
     max_score: Optional[float] = Query(None),
     consent_status: Optional[str] = Query(None),
     data_source: Optional[str] = Query(None),
-    q: Optional[str] = Query(None, description="Text search across name, address"),
+    q: Optional[str] = Query(None, max_length=100, description="Text search across name, address"),
     sort_by: Optional[str] = Query("created_at", description="Sort: created_at, score"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
@@ -338,7 +339,7 @@ async def enrich_prospect(prospect_id: str, db: AsyncSession = Depends(get_db)):
     try:
         enrichment = prospect_data.enrich_property(prospect.property_address)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"ATTOM API error: {e}")
+        raise HTTPException(status_code=502, detail="ATTOM API error. Please try again later.")
 
     if enrichment.get("property_data"):
         existing = prospect.property_data or {}
@@ -486,8 +487,11 @@ async def skip_trace_prospect(prospect_id: str, db: AsyncSession = Depends(get_d
 
 
 @router.post("/batch-skip-trace")
-async def batch_skip_trace(prospect_ids: list[str], db: AsyncSession = Depends(get_db)):
-    """Batch skip trace for multiple prospects."""
+async def batch_skip_trace(
+    prospect_ids: list[str] = Body(..., max_length=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Batch skip trace for multiple prospects (max 100)."""
     result = await db.execute(select(Prospect).where(Prospect.id.in_(prospect_ids)))
     prospects = result.scalars().all()
 
@@ -538,8 +542,11 @@ async def batch_skip_trace(prospect_ids: list[str], db: AsyncSession = Depends(g
 # ---------------------------------------------------------------------------
 
 @router.post("/batch-dnc-check")
-async def batch_dnc_check(prospect_ids: list[str], db: AsyncSession = Depends(get_db)):
-    """Check DNC list status for multiple prospects."""
+async def batch_dnc_check(
+    prospect_ids: list[str] = Body(..., max_length=200),
+    db: AsyncSession = Depends(get_db),
+):
+    """Check DNC list status for multiple prospects (max 200)."""
     from datetime import datetime
     from app.services.prospect_enrichment import check_dnc_list
 

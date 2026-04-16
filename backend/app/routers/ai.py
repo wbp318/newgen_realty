@@ -453,7 +453,7 @@ async def auto_comp_analysis(request: AutoCompAnalysisRequest, db: AsyncSession 
             comp_count=request.comp_count,
         )
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Market data API error: {e}")
+        raise HTTPException(status_code=502, detail="Market data API error. Please try again later.")
 
     if not market_result.comps:
         raise HTTPException(status_code=404, detail="No comparable sales found for this address")
