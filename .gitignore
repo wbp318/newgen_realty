@@ -45,3 +45,6 @@ docker-compose.override.yml
 
 # Claude Code (session files)
 .claude/
+
+# Pentest results (may contain sensitive findings)
+pentest/results/
