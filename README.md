@@ -21,12 +21,12 @@ AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives 
 
 | File | Contents |
 |------|----------|
-| `WALKTHROUGH.md` | Step-by-step guide to using every feature |
-| `GUIDE.md` | Complete reference: terms, statuses, workflows, scoring, compliance, multi-state |
-| `COMPLIANCE.md` | Full TCPA compliance reference: every flag explained, consent rules, DNC, opt-out processing, contact hours, common scenarios |
-| `IP_PROTECTION.md` | IP protection plan: copyright, trademark, patent, LLC, notarization |
-| `TUTORIAL.md` | Technical build tutorial for developers |
-| `CLAUDE.md` | Architecture guide for Claude Code AI assistant |
+| [WALKTHROUGH.md](WALKTHROUGH.md) | Step-by-step guide to using every feature |
+| [GUIDE.md](GUIDE.md) | Complete reference: terms, statuses, workflows, scoring, compliance, multi-state |
+| [COMPLIANCE.md](COMPLIANCE.md) | Full TCPA compliance reference: every flag explained, consent rules, DNC, opt-out processing, contact hours, common scenarios |
+| [IP_PROTECTION.md](IP_PROTECTION.md) | IP protection plan: copyright, trademark, patent, LLC, notarization |
+| [TUTORIAL.md](TUTORIAL.md) | Technical build tutorial for developers |
+| [CLAUDE.md](CLAUDE.md) | Architecture guide for Claude Code AI assistant |
 
 ---
 
