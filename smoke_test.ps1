@@ -18,7 +18,6 @@ $script:fail = 0
 
 function Check {
     param(
-        [string]$Label,
         [string]$Path,
         [int]$Expected = 200
     )
@@ -46,21 +45,21 @@ Write-Host "Smoke test against $BaseUrl"
 Write-Host ""
 
 Write-Host "Static + OpenAPI"
-Check "docs"              "/docs"
-Check "openapi"           "/openapi.json"
+Check "/docs"
+Check "/openapi.json"
 
 Write-Host ""
 Write-Host "Read-only list endpoints"
-Check "prospects list"    "/api/prospects?limit=3"
-Check "contacts list"     "/api/contacts?limit=3"
-Check "properties list"   "/api/properties?limit=3"
-Check "activities list"   "/api/activities?limit=3"
-Check "campaigns list"    "/api/outreach/campaigns?limit=3"
+Check "/api/prospects?limit=3"
+Check "/api/contacts?limit=3"
+Check "/api/properties?limit=3"
+Check "/api/activities?limit=3"
+Check "/api/outreach/campaigns?limit=3"
 
 Write-Host ""
 Write-Host "Status / config endpoints (touch code paths edited in recent cleanup)"
-Check "prospects status"  "/api/prospects/status"
-Check "prospects geo"     "/api/prospects/geo"
+Check "/api/prospects/status"
+Check "/api/prospects/geo"
 
 Write-Host ""
 if ($script:fail -eq 0) {

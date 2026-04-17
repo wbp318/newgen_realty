@@ -491,7 +491,7 @@ async def enrich_prospect(prospect_id: str, db: AsyncSession = Depends(get_db)):
         if not prospect.mailing_address and owner.get("mailing_address"):
             prospect.mailing_address = owner["mailing_address"]
 
-    # Try to get AVM (optional enrichment — log and continue on failure)
+    # AVM is optional enrichment — log and continue on failure.
     try:
         avm = prospect_data.get_avm(prospect.property_address)
         if avm:
