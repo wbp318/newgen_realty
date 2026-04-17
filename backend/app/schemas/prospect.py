@@ -74,6 +74,9 @@ class ProspectResponse(BaseModel):
     opt_out_date: Optional[datetime] = None
     opt_out_processed: bool
     contact_window_timezone: Optional[str] = None
+    property_latitude: Optional[float] = None
+    property_longitude: Optional[float] = None
+    geocoded_at: Optional[datetime] = None
     contact_id: Optional[str] = None
     data_source: str
     source_record_id: Optional[str] = None
@@ -84,6 +87,18 @@ class ProspectResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProspectGeoPoint(BaseModel):
+    id: str
+    latitude: float
+    longitude: float
+    property_address: str
+    property_city: Optional[str] = None
+    property_state: Optional[str] = None
+    prospect_type: str
+    status: str
+    ai_prospect_score: Optional[float] = None
 
 
 class ProspectSearchRequest(BaseModel):

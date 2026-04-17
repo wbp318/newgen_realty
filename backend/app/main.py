@@ -5,13 +5,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 from app.routers import properties, contacts, ai, activities, conversations, market_data, prospects, outreach
+from app.services import scheduler as drip_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    yield
+    drip_scheduler.start_scheduler()
+    try:
+        yield
+    finally:
+        drip_scheduler.shutdown_scheduler()
 
 
 app = FastAPI(

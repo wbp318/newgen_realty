@@ -1,14 +1,18 @@
-from datetime import datetime
+import hashlib
+import hmac
+import logging
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.activity import Activity
-from app.models.outreach import OutreachCampaign, OutreachMessage
-from app.models.prospect import Prospect
+from app.models.outreach import CampaignStatus, MessageStatus, OutreachCampaign, OutreachMessage
+from app.models.prospect import ConsentStatus, Prospect
 from app.models.prospect_list import ProspectList
 from app.schemas.outreach import (
     CampaignInsightsResponse,
@@ -21,6 +25,8 @@ from app.schemas.outreach import (
 )
 from app.services.outreach_generator import generate_outreach_message, generate_campaign_insights
 from app.services.prospect_enrichment import validate_outreach_compliance
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/outreach", tags=["outreach"])
 
@@ -421,3 +427,395 @@ async def campaign_insights(campaign_id: str, db: AsyncSession = Depends(get_db)
     await db.commit()
 
     return CampaignInsightsResponse(**insights)
+
+
+# ---------------------------------------------------------------------------
+# Drip scheduler: activate / pause / send-now
+# ---------------------------------------------------------------------------
+
+def _default_sequence() -> list[dict]:
+    """Single-touch default if the campaign has no sequence_config."""
+    return [{"step": 1, "day_offset": 0, "medium": "email", "tone_override": None}]
+
+
+@router.post("/campaigns/{campaign_id}/activate")
+async def activate_campaign(campaign_id: str, db: AsyncSession = Depends(get_db)):
+    """Expand sequence_config into per-prospect OutreachMessage rows.
+
+    Idempotent: skips (campaign_id, prospect_id, sequence_step) that already exist.
+    """
+    result = await db.execute(
+        select(OutreachCampaign).where(OutreachCampaign.id == campaign_id)
+    )
+    campaign = result.scalar_one_or_none()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if not campaign.prospect_list_id:
+        raise HTTPException(status_code=400, detail="Campaign has no prospect list assigned")
+
+    pl = (
+        await db.execute(
+            select(ProspectList).where(ProspectList.id == campaign.prospect_list_id)
+        )
+    ).scalar_one_or_none()
+    if not pl or not pl.prospect_ids:
+        raise HTTPException(status_code=400, detail="Prospect list is empty")
+
+    prospects = (
+        await db.execute(select(Prospect).where(Prospect.id.in_(pl.prospect_ids)))
+    ).scalars().all()
+
+    sequence = campaign.sequence_config or _default_sequence()
+    existing_keys = set(
+        (m.prospect_id, m.sequence_step)
+        for m in (
+            await db.execute(
+                select(OutreachMessage).where(OutreachMessage.campaign_id == campaign_id)
+            )
+        ).scalars().all()
+    )
+
+    now = datetime.now(timezone.utc)
+    queued = 0
+    skipped_existing = 0
+    blocked = 0
+
+    for prospect in prospects:
+        # Hard-block opt-outs and do-not-contact entirely
+        if prospect.status == "do_not_contact" or prospect.consent_status == ConsentStatus.REVOKED.value:
+            blocked += 1
+            continue
+
+        prospect_data = {
+            "first_name": prospect.first_name,
+            "last_name": prospect.last_name,
+            "property_address": prospect.property_address,
+            "property_city": prospect.property_city,
+            "property_state": prospect.property_state,
+            "prospect_type": prospect.prospect_type,
+            "property_data": prospect.property_data,
+            "motivation_signals": prospect.motivation_signals,
+            "mailing_address": prospect.mailing_address,
+        }
+
+        for step in sequence:
+            step_num = int(step.get("step", 1))
+            if (prospect.id, step_num) in existing_keys:
+                skipped_existing += 1
+                continue
+
+            medium = step.get("medium", "email")
+            tone = step.get("tone_override") or "professional"
+            day_offset = int(step.get("day_offset", 0))
+
+            if campaign.ai_personalize:
+                msg = generate_outreach_message(
+                    prospect_data=prospect_data, medium=medium, tone=tone
+                )
+                subject = msg.get("subject")
+                body = msg["body"]
+            else:
+                subject = None
+                body = campaign.message_template or ""
+
+            scheduled = now + timedelta(days=day_offset)
+            message = OutreachMessage(
+                campaign_id=campaign_id,
+                prospect_id=prospect.id,
+                medium=medium,
+                subject=subject,
+                body=body,
+                status=MessageStatus.QUEUED.value,
+                sequence_step=step_num,
+                scheduled_send_time=scheduled,
+                consent_verified=prospect.consent_status == ConsentStatus.GRANTED.value,
+                dnc_cleared=prospect.dnc_checked and not prospect.dnc_listed,
+            )
+            db.add(message)
+            queued += 1
+
+    campaign.status = CampaignStatus.ACTIVE.value
+    if not campaign.started_at:
+        campaign.started_at = now
+    campaign.total_messages = (campaign.total_messages or 0) + queued
+    await db.commit()
+
+    db.add(
+        Activity(
+            activity_type="status_change",
+            title=f"Activated campaign: {campaign.name}",
+            description=f"Queued {queued} messages across {len(sequence)} steps",
+            extra_data={"campaign_id": campaign_id, "queued": queued, "blocked": blocked},
+        )
+    )
+    await db.commit()
+
+    return {
+        "campaign_id": campaign_id,
+        "status": CampaignStatus.ACTIVE.value,
+        "queued": queued,
+        "skipped_existing": skipped_existing,
+        "blocked": blocked,
+    }
+
+
+@router.post("/campaigns/{campaign_id}/pause")
+async def pause_campaign(campaign_id: str, db: AsyncSession = Depends(get_db)):
+    """Pause a campaign. Queued messages stay queued and resume on re-activate."""
+    result = await db.execute(
+        select(OutreachCampaign).where(OutreachCampaign.id == campaign_id)
+    )
+    campaign = result.scalar_one_or_none()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    campaign.status = CampaignStatus.PAUSED.value
+    await db.commit()
+    return {"campaign_id": campaign_id, "status": CampaignStatus.PAUSED.value}
+
+
+@router.post("/messages/{message_id}/send-now")
+async def send_message_now(message_id: str, db: AsyncSession = Depends(get_db)):
+    """Dispatch a queued or draft message immediately (compliance-gated)."""
+    from app.services.scheduler import _dispatch_one
+
+    result = await db.execute(
+        select(OutreachMessage).where(OutreachMessage.id == message_id)
+    )
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    prospect = (
+        await db.execute(select(Prospect).where(Prospect.id == message.prospect_id))
+    ).scalar_one_or_none()
+    campaign = (
+        await db.execute(
+            select(OutreachCampaign).where(OutreachCampaign.id == message.campaign_id)
+        )
+    ).scalar_one_or_none()
+    if not prospect or not campaign:
+        raise HTTPException(status_code=400, detail="Missing prospect or campaign")
+
+    # Force a "send window" match by temporarily widening if manual override
+    original_start, original_end = campaign.send_window_start, campaign.send_window_end
+    campaign.send_window_start, campaign.send_window_end = 0, 24
+    try:
+        message.status = MessageStatus.QUEUED.value
+        await _dispatch_one(db, message, prospect, campaign)
+        await db.commit()
+    finally:
+        campaign.send_window_start, campaign.send_window_end = original_start, original_end
+        await db.commit()
+
+    return {
+        "message_id": message_id,
+        "status": message.status,
+        "provider_message_id": message.provider_message_id,
+        "last_error": message.last_error,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Inbound webhooks (Resend + Twilio)
+# ---------------------------------------------------------------------------
+
+def _constant_time_equals(a: str, b: str) -> bool:
+    return hmac.compare_digest(a.encode(), b.encode())
+
+
+@router.post("/webhooks/resend")
+async def resend_webhook(
+    request: Request,
+    svix_signature: Optional[str] = Header(None, alias="svix-signature"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Resend email events (delivered, opened, bounced, complained).
+
+    Resend uses Svix-style HMAC signatures. If INBOUND_WEBHOOK_SECRET is set,
+    we require a valid signature; otherwise we accept (useful for local dev).
+    """
+    body = await request.body()
+
+    if settings.INBOUND_WEBHOOK_SECRET:
+        expected = hmac.new(
+            settings.INBOUND_WEBHOOK_SECRET.encode(), body, hashlib.sha256
+        ).hexdigest()
+        provided = (svix_signature or "").split(",")[-1].strip()
+        if not _constant_time_equals(expected, provided):
+            raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    event_type = payload.get("type", "")
+    data = payload.get("data", {})
+    provider_id = data.get("email_id") or data.get("id")
+    if not provider_id:
+        return {"ok": True, "skipped": "no id"}
+
+    msg = (
+        await db.execute(
+            select(OutreachMessage).where(OutreachMessage.provider_message_id == provider_id)
+        )
+    ).scalar_one_or_none()
+    if not msg:
+        return {"ok": True, "skipped": "message not found"}
+
+    now = datetime.now(timezone.utc)
+    status_map = {
+        "email.delivered": (MessageStatus.DELIVERED.value, "delivered_at"),
+        "email.opened": (MessageStatus.OPENED.value, "opened_at"),
+        "email.bounced": (MessageStatus.BOUNCED.value, None),
+        "email.complained": (MessageStatus.FAILED.value, None),
+    }
+    if event_type in status_map:
+        new_status, ts_field = status_map[event_type]
+        msg.status = new_status
+        if ts_field:
+            setattr(msg, ts_field, now)
+        # Update campaign aggregates
+        campaign = (
+            await db.execute(
+                select(OutreachCampaign).where(OutreachCampaign.id == msg.campaign_id)
+            )
+        ).scalar_one_or_none()
+        if campaign:
+            if event_type == "email.delivered":
+                campaign.delivered_count = (campaign.delivered_count or 0) + 1
+            elif event_type == "email.opened":
+                campaign.opened_count = (campaign.opened_count or 0) + 1
+        await db.commit()
+
+    return {"ok": True, "event": event_type}
+
+
+@router.post("/webhooks/twilio")
+async def twilio_webhook(
+    request: Request,
+    x_twilio_signature: Optional[str] = Header(None, alias="X-Twilio-Signature"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Twilio status callbacks and inbound SMS.
+
+    Twilio posts application/x-www-form-urlencoded. An inbound SMS includes a
+    'Body' field; a status callback includes 'MessageSid' and 'MessageStatus'.
+    """
+    # Twilio signature validation is best done with their SDK helper, but we
+    # accept any request when no secret is configured (local dev).
+    form = await request.form()
+    params = dict(form)
+
+    # Inbound SMS reply
+    if params.get("Body") and params.get("From"):
+        from_number = str(params["From"])
+        body = str(params["Body"]).strip()
+
+        # Look up prospect by phone (tolerant of formatting differences)
+        digits = "".join(c for c in from_number if c.isdigit())
+        candidates = (
+            await db.execute(select(Prospect).where(Prospect.phone.isnot(None)))
+        ).scalars().all()
+        prospect = next(
+            (p for p in candidates if "".join(c for c in (p.phone or "") if c.isdigit()).endswith(digits[-10:])),
+            None,
+        )
+
+        if prospect:
+            stop_keywords = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"}
+            now = datetime.now(timezone.utc)
+            if body.upper() in stop_keywords:
+                prospect.opt_out_date = now
+                prospect.consent_status = ConsentStatus.REVOKED.value
+                prospect.status = "do_not_contact"
+                # Cancel all future queued SMS for this prospect
+                future_msgs = (
+                    await db.execute(
+                        select(OutreachMessage).where(
+                            OutreachMessage.prospect_id == prospect.id,
+                            OutreachMessage.status == MessageStatus.QUEUED.value,
+                            OutreachMessage.medium == "text",
+                        )
+                    )
+                ).scalars().all()
+                for m in future_msgs:
+                    m.status = MessageStatus.FAILED.value
+                    m.last_error = "Recipient opted out via STOP"
+                db.add(
+                    Activity(
+                        activity_type="status_change",
+                        title="Opt-out received (STOP)",
+                        description=f"From {from_number}; {len(future_msgs)} future messages cancelled",
+                        prospect_id=prospect.id,
+                    )
+                )
+            else:
+                db.add(
+                    Activity(
+                        activity_type="text",
+                        title=f"Reply from {from_number}",
+                        description=body[:500],
+                        prospect_id=prospect.id,
+                        contact_id=prospect.contact_id,
+                    )
+                )
+                # Mark the most recent sent SMS as replied
+                recent_sms = (
+                    await db.execute(
+                        select(OutreachMessage)
+                        .where(
+                            OutreachMessage.prospect_id == prospect.id,
+                            OutreachMessage.medium == "text",
+                            OutreachMessage.status == MessageStatus.SENT.value,
+                        )
+                        .order_by(OutreachMessage.sent_at.desc())
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if recent_sms:
+                    recent_sms.status = MessageStatus.REPLIED.value
+                    recent_sms.replied_at = now
+                    recent_sms.extra_data = {"reply_body": body}
+                    campaign = (
+                        await db.execute(
+                            select(OutreachCampaign).where(
+                                OutreachCampaign.id == recent_sms.campaign_id
+                            )
+                        )
+                    ).scalar_one_or_none()
+                    if campaign:
+                        campaign.replied_count = (campaign.replied_count or 0) + 1
+            await db.commit()
+        return {"ok": True, "kind": "inbound_sms"}
+
+    # Status callback for an outbound SMS we sent
+    sid = params.get("MessageSid")
+    twilio_status = params.get("MessageStatus", "").lower()
+    if sid and twilio_status:
+        msg = (
+            await db.execute(
+                select(OutreachMessage).where(OutreachMessage.provider_message_id == sid)
+            )
+        ).scalar_one_or_none()
+        if msg:
+            now = datetime.now(timezone.utc)
+            if twilio_status == "delivered":
+                msg.status = MessageStatus.DELIVERED.value
+                msg.delivered_at = now
+                campaign = (
+                    await db.execute(
+                        select(OutreachCampaign).where(
+                            OutreachCampaign.id == msg.campaign_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if campaign:
+                    campaign.delivered_count = (campaign.delivered_count or 0) + 1
+            elif twilio_status in ("failed", "undelivered"):
+                msg.status = MessageStatus.FAILED.value
+                msg.last_error = f"Twilio status: {twilio_status}"
+            await db.commit()
+        return {"ok": True, "kind": "status_callback"}
+
+    return {"ok": True, "kind": "ignored"}

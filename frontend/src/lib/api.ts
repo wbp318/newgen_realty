@@ -93,6 +93,10 @@ export const batchSkipTrace = (prospectIds: string[]) =>
   api.post("/api/prospects/batch-skip-trace", prospectIds);
 export const batchDncCheck = (prospectIds: string[]) =>
   api.post("/api/prospects/batch-dnc-check", prospectIds);
+export const getProspectGeoPoints = (params?: Record<string, string | number>) =>
+  api.get("/api/prospects/geo", { params });
+export const runGeocodeBackfill = (limit: number = 50) =>
+  api.post("/api/prospects/geocode-backfill", null, { params: { limit } });
 
 // Prospect Lists
 export const getProspectLists = () => api.get("/api/prospects/lists");
@@ -124,5 +128,20 @@ export const getCampaignMessages = (campaignId: string) =>
   api.get(`/api/outreach/campaigns/${campaignId}/messages`);
 export const getCampaignInsights = (campaignId: string) =>
   api.post(`/api/outreach/campaigns/${campaignId}/insights`);
+export const activateCampaign = (campaignId: string) =>
+  api.post(`/api/outreach/campaigns/${campaignId}/activate`);
+export const pauseCampaign = (campaignId: string) =>
+  api.post(`/api/outreach/campaigns/${campaignId}/pause`);
+export const sendMessageNow = (messageId: string) =>
+  api.post(`/api/outreach/messages/${messageId}/send-now`);
+export const generateAllCampaignMessages = (
+  campaignId: string,
+  params?: Record<string, string>
+) =>
+  api.post(
+    `/api/outreach/campaigns/${campaignId}/generate-all`,
+    null,
+    { params }
+  );
 
 export default api;

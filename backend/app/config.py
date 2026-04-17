@@ -22,6 +22,22 @@ class Settings(BaseSettings):
     SKIP_TRACE_PROVIDER: str = "free"
     SKIP_TRACE_API_KEY: str = ""
     SUPPORTED_STATES: list[str] = ["LA", "AR", "MS"]
+    # Outreach send providers (Phase 1A)
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_FROM_NUMBER: str = ""
+    INBOUND_WEBHOOK_SECRET: str = ""
+    # Drip scheduler
+    SCHEDULER_ENABLED: bool = True
+    SCHEDULER_TICK_SECONDS: int = 60
+    SCHEDULER_BATCH_SIZE: int = 50
+    DAILY_SEND_CAP_EMAIL: int = 500
+    DAILY_SEND_CAP_SMS: int = 200
+    # Geocoding (Phase 4A)
+    GEOCODE_PROVIDER: str = "nominatim"
+    GEOCODE_USER_AGENT: str = "newgen-realty/0.2"
 
     class Config:
         env_file = ".env"

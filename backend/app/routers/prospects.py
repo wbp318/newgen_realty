@@ -14,6 +14,7 @@ from app.models.prospect_list import ProspectList
 from app.schemas.contact import ContactResponse
 from app.schemas.prospect import (
     ProspectCreate,
+    ProspectGeoPoint,
     ProspectListCreate,
     ProspectListResponse,
     ProspectListUpdate,
@@ -25,7 +26,24 @@ from app.schemas.prospect import (
 from app.services import prospect_data
 from app.services import skip_trace as skip_trace_service
 from app.services import county_data
+from app.services import geocoder
 from app.services.compliance import validate_outreach_compliance
+
+
+def _apply_geocode(prospect: Prospect) -> None:
+    """Best-effort geocoding — mutates prospect in place, silently no-ops on fail."""
+    from datetime import datetime
+
+    result = geocoder.geocode(
+        prospect.property_address,
+        prospect.property_city,
+        prospect.property_state,
+        prospect.property_zip,
+    )
+    if result:
+        prospect.property_latitude = result["latitude"]
+        prospect.property_longitude = result["longitude"]
+        prospect.geocoded_at = datetime.utcnow()
 
 router = APIRouter(prefix="/api/prospects", tags=["prospects"])
 
@@ -176,6 +194,7 @@ async def search_prospects(
             continue
 
         prospect = Prospect(**raw)
+        _apply_geocode(prospect)
         db.add(prospect)
         imported.append(prospect)
         existing_addresses.add(raw["property_address"])
@@ -267,10 +286,123 @@ async def list_prospects(
 @router.post("", response_model=ProspectResponse, status_code=201)
 async def create_prospect(data: ProspectCreate, db: AsyncSession = Depends(get_db)):
     prospect = Prospect(**data.model_dump(exclude_none=True))
+    _apply_geocode(prospect)
     db.add(prospect)
     await db.commit()
     await db.refresh(prospect)
     return prospect
+
+
+@router.get("/geo", response_model=list[ProspectGeoPoint])
+async def get_prospect_geo(
+    min_lat: Optional[float] = Query(None, ge=-90, le=90),
+    max_lat: Optional[float] = Query(None, ge=-90, le=90),
+    min_lng: Optional[float] = Query(None, ge=-180, le=180),
+    max_lng: Optional[float] = Query(None, ge=-180, le=180),
+    min_score: Optional[float] = Query(None, ge=0, le=100),
+    state: Optional[str] = Query(None, max_length=2),
+    status: Optional[str] = Query(None, max_length=50),
+    types: Optional[str] = Query(None, max_length=100, description="Comma-separated prospect types"),
+    limit: int = Query(2000, le=5000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lightweight geo points for map rendering. Excludes prospects without coordinates."""
+    query = select(
+        Prospect.id,
+        Prospect.property_latitude,
+        Prospect.property_longitude,
+        Prospect.property_address,
+        Prospect.property_city,
+        Prospect.property_state,
+        Prospect.prospect_type,
+        Prospect.status,
+        Prospect.ai_prospect_score,
+    ).where(
+        Prospect.property_latitude.isnot(None),
+        Prospect.property_longitude.isnot(None),
+    )
+    if min_lat is not None:
+        query = query.where(Prospect.property_latitude >= min_lat)
+    if max_lat is not None:
+        query = query.where(Prospect.property_latitude <= max_lat)
+    if min_lng is not None:
+        query = query.where(Prospect.property_longitude >= min_lng)
+    if max_lng is not None:
+        query = query.where(Prospect.property_longitude <= max_lng)
+    if min_score is not None:
+        query = query.where(Prospect.ai_prospect_score >= min_score)
+    if state:
+        query = query.where(Prospect.property_state == state)
+    if status:
+        query = query.where(Prospect.status == status)
+    if types:
+        type_list = [t.strip() for t in types.split(",") if t.strip()][:10]
+        if type_list:
+            query = query.where(Prospect.prospect_type.in_(type_list))
+    query = query.limit(limit)
+    rows = (await db.execute(query)).all()
+    return [
+        ProspectGeoPoint(
+            id=r.id,
+            latitude=r.property_latitude,
+            longitude=r.property_longitude,
+            property_address=r.property_address,
+            property_city=r.property_city,
+            property_state=r.property_state,
+            prospect_type=r.prospect_type,
+            status=r.status,
+            ai_prospect_score=r.ai_prospect_score,
+        )
+        for r in rows
+    ]
+
+
+@router.post("/geocode-backfill")
+async def geocode_backfill(
+    limit: int = Query(50, le=200),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fill in latitude/longitude on prospects that are missing it.
+
+    Respects Nominatim's 1 req/sec limit via the geocoder service, so ~50 prospects
+    takes ~55s. Use small batches.
+    """
+    from datetime import datetime
+
+    missing = (
+        await db.execute(
+            select(Prospect)
+            .where(Prospect.property_latitude.is_(None))
+            .where(Prospect.property_address.isnot(None))
+            .limit(limit)
+        )
+    ).scalars().all()
+
+    updated = 0
+    failed = 0
+    for prospect in missing:
+        result = geocoder.geocode(
+            prospect.property_address,
+            prospect.property_city,
+            prospect.property_state,
+            prospect.property_zip,
+        )
+        if result:
+            prospect.property_latitude = result["latitude"]
+            prospect.property_longitude = result["longitude"]
+            prospect.geocoded_at = datetime.utcnow()
+            updated += 1
+        else:
+            failed += 1
+
+    if updated:
+        await db.commit()
+
+    return {
+        "scanned": len(missing),
+        "updated": updated,
+        "failed": failed,
+    }
 
 
 @router.get("/{prospect_id}", response_model=ProspectResponse)

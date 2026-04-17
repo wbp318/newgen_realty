@@ -74,6 +74,34 @@ All follow the same pattern established by `services/market_data.py`: sync funct
 - `services/prospect_data.py` — ATTOM Data API for public property records, owner data, AVM estimates
 - `services/skip_trace.py` — Pluggable skip tracing (free stub + BatchSkipTracing.com). Provider selected via `SKIP_TRACE_PROVIDER` config.
 - `services/county_data.py` — Free county/parish portal scrapers for LA, AR, MS
+- `services/email_sender.py` — Resend transactional email. Lazy-imports the SDK inside `send_email` so the backend boots without the library installed.
+- `services/sms_sender.py` — Twilio SMS. Normalizes US numbers to E.164; lazy-imports the SDK.
+- `services/geocoder.py` — OpenStreetMap Nominatim (free, no key). Enforces a 1.1s global throttle via a module-level lock; callers should expect ~1s per lookup. Per Nominatim ToS, send a descriptive `GEOCODE_USER_AGENT`.
+
+### Drip send engine
+
+`services/scheduler.py` is an in-process APScheduler `AsyncIOScheduler` started in the FastAPI lifespan (`main.py`). Every `SCHEDULER_TICK_SECONDS`, `sweep_due_messages()` pulls `OutreachMessage` rows where `status='queued' AND scheduled_send_time <= now`, re-validates compliance via `compliance.can_contact_via_medium()`, and dispatches via `email_sender` or `sms_sender`.
+
+- **Transient blocks** (outside contact hours, outside campaign `send_window_start`/`end`, daily cap hit) leave the message QUEUED — it will be retried next tick.
+- **Permanent blocks** (DNC on phone/text, revoked consent, missing contact info) flip the message to FAILED with `last_error`.
+- **Provider errors** increment `retry_count`; after `MAX_RETRIES=3` the message fails.
+- On success: writes `provider`, `provider_message_id`, `sent_at`, bumps `campaign.sent_count`, and creates an Activity row.
+
+Sequence config lives on `OutreachCampaign.sequence_config` as `[{step, day_offset, medium, tone_override}]`. `POST /api/outreach/campaigns/{id}/activate` expands it into per-prospect queued messages with `scheduled_send_time = now + day_offset` (idempotent via the `uq_message_campaign_prospect_step` constraint). `POST /pause` flips status but does not cancel queued messages. `POST /messages/{id}/send-now` force-dispatches a single message.
+
+Inbound webhooks:
+- `POST /api/outreach/webhooks/resend` — HMAC-verified (Svix-style) via `INBOUND_WEBHOOK_SECRET` when set, otherwise accepts (dev mode). Updates message status on delivered/opened/bounced/complained.
+- `POST /api/outreach/webhooks/twilio` — delivery status callbacks + inbound SMS. STOP-keyword replies (`STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`) auto-revoke consent, set opt-out date, mark prospect do-not-contact, and cancel future queued SMS for that prospect.
+
+Twilio webhooks require `python-multipart` (listed in `requirements.txt`) for form parsing.
+
+### Geocoding + Farm Map
+
+Every Prospect and Property has optional `latitude`/`longitude`/`geocoded_at` (Prospect uses `property_latitude`/`property_longitude`). `_apply_geocode()` in `routers/prospects.py` is called on both manual `POST /api/prospects` and ATTOM search imports — failures are silent (the row is still created, just without coordinates).
+
+- `POST /api/prospects/geocode-backfill?limit=N` fills missing coords; ~1s per row.
+- `GET /api/prospects/geo` returns lightweight `ProspectGeoPoint[]` filtered by bounds, min_score, state, status, and comma-separated types (max 10).
+- Frontend `/map` dynamically imports the Leaflet map client-side (`components/map/ProspectMap.tsx`) with OSM tiles (no API key), a heat overlay, and color-coded `CircleMarker`s. Auto-fits bounds to the loaded points on first render.
 
 ### Prospecting Engine
 
@@ -97,11 +125,17 @@ Models: Property, Contact, Activity, Conversation, Prospect, ProspectList, Outre
 
 Activity model has `contact_id`, `property_id`, and `prospect_id` columns (all nullable) for linking to any entity.
 
+`OutreachMessage` has a composite index on `(status, scheduled_send_time)` for the scheduler's hot sweep query and a unique constraint on `(campaign_id, prospect_id, sequence_step)` to make campaign activation idempotent.
+
+**SQLite migrations**: Local dev uses `create_all` on startup, which **only creates missing tables — it does not add columns to existing ones**. When you add a column to an existing model, either delete `backend/newgen_realty.db` (loses local data) or run additive `ALTER TABLE` statements manually. Alembic is pinned in `requirements.txt` but not initialized yet.
+
 ### Frontend
 
 Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/api.ts` (axios, baseURL defaults to `localhost:8000`). Types in `lib/types.ts` (20+ interfaces). Path alias: `@/*` → `./src/*`. Tailwind v4 (no config file, uses defaults).
 
-Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot leads), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail with messages).
+Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot leads), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail with drip sequence builder + messages table), `/map` (Farm Map — geographic view of prospects with heat + markers).
+
+Leaflet/react-leaflet are used only on `/map`. The map component **must** be loaded via `next/dynamic` with `ssr: false` because `leaflet` and `leaflet.heat` reference `window` at import time. `leaflet/dist/leaflet.css` is imported inside `components/map/ProspectMap.tsx`.
 
 ## Conventions
 
@@ -121,6 +155,8 @@ Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot le
 - Text search query params must have `max_length=100`
 - No authentication yet — see `SECURITY.md` for pre-production checklist
 - Pentest suite in `pentest/` — run after any security-related changes. Auth/IDOR tests auto-skip until auth is implemented.
+- Scheduled messages must respect `contact_window_timezone` on Prospect (default America/Chicago) and the campaign's `send_window_start`/`send_window_end`, all within TCPA 8am–9pm recipient-local.
+- Webhooks in dev: Twilio/Vapi/Resend need a public URL. Use ngrok or Cloudflare Tunnel; leave `INBOUND_WEBHOOK_SECRET` unset locally to accept unsigned events.
 
 ## Environment Variables
 
@@ -130,6 +166,12 @@ Key optional vars:
 - `REALTY_MOLE_API_KEY` — market comps (RapidAPI)
 - `ATTOM_API_KEY` — prospecting engine (attomdata.com)
 - `SKIP_TRACE_PROVIDER` / `SKIP_TRACE_API_KEY` — skip tracing (default: `free`)
+- `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — email sending via Resend
+- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` — SMS via Twilio
+- `INBOUND_WEBHOOK_SECRET` — HMAC secret for Resend/Twilio webhook signature verification (when unset, webhooks accept without validation — dev only)
+- `SCHEDULER_ENABLED` (default: `true`), `SCHEDULER_TICK_SECONDS` (default: 60), `SCHEDULER_BATCH_SIZE` (default: 50)
+- `DAILY_SEND_CAP_EMAIL` / `DAILY_SEND_CAP_SMS` — global daily caps (overridable per-campaign via `daily_send_cap`)
+- `GEOCODE_PROVIDER` (default: `nominatim`), `GEOCODE_USER_AGENT` (required by Nominatim ToS)
 - `AI_MODEL` — Sonnet for quality tasks (default: `claude-sonnet-4-20250514`)
 - `AI_MODEL_FAST` — Haiku for speed tasks (default: `claude-haiku-4-5-20251001`)
 - `DAILY_REQUEST_LIMIT` — AI requests per day (default: 100)

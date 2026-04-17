@@ -66,6 +66,9 @@ class PropertyResponse(BaseModel):
     photos: Optional[list[str]] = None
     mls_number: Optional[str] = None
     notes: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    geocoded_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

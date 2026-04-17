@@ -73,6 +73,10 @@ class Prospect(Base):
     opt_out_date = Column(DateTime)
     opt_out_processed = Column(Boolean, default=False)
     contact_window_timezone = Column(String(50))
+    # Geographic coordinates (Phase 4A)
+    property_latitude = Column(Float)
+    property_longitude = Column(Float)
+    geocoded_at = Column(DateTime)
     # Linking
     contact_id = Column(String(36), index=True)
     data_source = Column(String(50), default="manual")

@@ -8,6 +8,7 @@ from app.schemas.ai import (
 )
 from app.schemas.prospect import (
     ProspectCreate, ProspectUpdate, ProspectResponse,
+    ProspectGeoPoint,
     ProspectSearchRequest, ProspectSearchResponse,
     ProspectScoreRequest, ProspectScoreResponse,
     BulkScoreRequest, BulkScoreResponse,
@@ -28,6 +29,7 @@ __all__ = [
     "CompAnalysisRequest", "CompAnalysisResponse",
     "CommDraftRequest", "CommDraftResponse",
     "ProspectCreate", "ProspectUpdate", "ProspectResponse",
+    "ProspectGeoPoint",
     "ProspectSearchRequest", "ProspectSearchResponse",
     "ProspectScoreRequest", "ProspectScoreResponse",
     "BulkScoreRequest", "BulkScoreResponse",

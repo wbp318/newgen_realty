@@ -1,26 +1,41 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class SequenceStep(BaseModel):
+    step: int = Field(..., ge=1)
+    day_offset: int = Field(0, ge=0, le=365)
+    medium: str = Field(..., max_length=20)
+    tone_override: Optional[str] = Field(None, max_length=50)
 
 
 class OutreachCampaignCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
+    name: str = Field(..., max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
     campaign_type: str = "email"
     prospect_list_id: Optional[str] = None
-    message_template: Optional[str] = None
+    message_template: Optional[str] = Field(None, max_length=5000)
     ai_personalize: bool = True
+    sequence_config: Optional[list[SequenceStep]] = None
+    send_window_start: Optional[int] = Field(None, ge=0, le=23)
+    send_window_end: Optional[int] = Field(None, ge=1, le=24)
+    daily_send_cap: Optional[int] = Field(None, ge=1, le=10000)
 
 
 class OutreachCampaignUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
     status: Optional[str] = None
     campaign_type: Optional[str] = None
     prospect_list_id: Optional[str] = None
-    message_template: Optional[str] = None
+    message_template: Optional[str] = Field(None, max_length=5000)
     ai_personalize: Optional[bool] = None
+    sequence_config: Optional[list[SequenceStep]] = None
+    send_window_start: Optional[int] = Field(None, ge=0, le=23)
+    send_window_end: Optional[int] = Field(None, ge=1, le=24)
+    daily_send_cap: Optional[int] = Field(None, ge=1, le=10000)
 
 
 class OutreachCampaignResponse(BaseModel):
@@ -39,6 +54,11 @@ class OutreachCampaignResponse(BaseModel):
     replied_count: int
     ai_campaign_insights: Optional[str] = None
     ai_insights_generated_at: Optional[datetime] = None
+    sequence_config: Optional[list[dict[str, Any]]] = None
+    send_window_start: Optional[int] = None
+    send_window_end: Optional[int] = None
+    daily_send_cap: Optional[int] = None
+    started_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -54,10 +74,17 @@ class OutreachMessageResponse(BaseModel):
     subject: Optional[str] = None
     body: str
     status: str
+    scheduled_send_time: Optional[datetime] = None
+    sequence_step: Optional[int] = None
     sent_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None
     replied_at: Optional[datetime] = None
+    provider: Optional[str] = None
+    provider_message_id: Optional[str] = None
+    last_error: Optional[str] = None
+    retry_count: Optional[int] = None
+    extra_data: Optional[dict[str, Any]] = None
     consent_verified: bool
     dnc_cleared: bool
     compliance_notes: Optional[str] = None

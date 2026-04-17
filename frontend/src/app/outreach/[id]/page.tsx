@@ -1,10 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getOutreachCampaign, updateOutreachCampaign, getCampaignMessages, getCampaignInsights } from "@/lib/api";
-import type { OutreachCampaign, OutreachMessage, CampaignInsights } from "@/lib/types";
+import {
+  getOutreachCampaign,
+  updateOutreachCampaign,
+  getCampaignMessages,
+  getCampaignInsights,
+  activateCampaign,
+  pauseCampaign,
+  sendMessageNow,
+} from "@/lib/api";
+import type {
+  OutreachCampaign,
+  OutreachMessage,
+  CampaignInsights,
+  SequenceStep,
+} from "@/lib/types";
+
+const DEFAULT_SEQUENCE: SequenceStep[] = [
+  { step: 1, day_offset: 0, medium: "email", tone_override: null },
+];
 
 export default function CampaignDetailPage() {
   const params = useParams();
@@ -16,6 +33,11 @@ export default function CampaignDetailPage() {
   const [insights, setInsights] = useState<CampaignInsights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
+  const [sequence, setSequence] = useState<SequenceStep[]>(DEFAULT_SEQUENCE);
+  const [savingSeq, setSavingSeq] = useState(false);
+  const [sendWindowStart, setSendWindowStart] = useState<number>(9);
+  const [sendWindowEnd, setSendWindowEnd] = useState<number>(18);
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     loadCampaign();
@@ -25,7 +47,15 @@ export default function CampaignDetailPage() {
   async function loadCampaign() {
     try {
       const res = await getOutreachCampaign(id);
-      setCampaign(res.data);
+      const c: OutreachCampaign = res.data;
+      setCampaign(c);
+      setSequence(
+        c.sequence_config && c.sequence_config.length > 0
+          ? c.sequence_config
+          : DEFAULT_SEQUENCE
+      );
+      setSendWindowStart(c.send_window_start ?? 9);
+      setSendWindowEnd(c.send_window_end ?? 18);
     } catch {
       router.push("/outreach");
     }
@@ -40,13 +70,111 @@ export default function CampaignDetailPage() {
     }
   }
 
-  async function handleStatusChange(newStatus: string) {
+  async function handleActivate() {
+    if (!confirm(`Activate campaign? This will queue messages for ${sequence.length} step(s) per prospect.`)) return;
+    setActivating(true);
     try {
-      await updateOutreachCampaign(id, { status: newStatus });
-      loadCampaign();
-    } catch {
-      alert("Error updating campaign status");
+      await updateOutreachCampaign(id, {
+        sequence_config: sequence,
+        send_window_start: sendWindowStart,
+        send_window_end: sendWindowEnd,
+      });
+      const res = await activateCampaign(id);
+      alert(
+        `Activated. Queued ${res.data.queued} messages. Skipped ${res.data.skipped_existing} existing, blocked ${res.data.blocked}.`
+      );
+      await loadCampaign();
+      await loadMessages();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail || "Error activating campaign";
+      alert(msg);
+    } finally {
+      setActivating(false);
     }
+  }
+
+  async function handlePause() {
+    try {
+      await pauseCampaign(id);
+      await loadCampaign();
+    } catch {
+      alert("Error pausing campaign");
+    }
+  }
+
+  async function handleResume() {
+    try {
+      await updateOutreachCampaign(id, { status: "active" });
+      await loadCampaign();
+    } catch {
+      alert("Error resuming campaign");
+    }
+  }
+
+  async function handleSendNow(messageId: string) {
+    try {
+      const res = await sendMessageNow(messageId);
+      if (res.data.status === "sent") {
+        alert("Message sent.");
+      } else if (res.data.last_error) {
+        alert(`Not sent: ${res.data.last_error}`);
+      } else {
+        alert(`Status: ${res.data.status}`);
+      }
+      await loadMessages();
+      await loadCampaign();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail || "Error sending message";
+      alert(msg);
+    }
+  }
+
+  async function handleSaveSequence() {
+    setSavingSeq(true);
+    try {
+      await updateOutreachCampaign(id, {
+        sequence_config: sequence,
+        send_window_start: sendWindowStart,
+        send_window_end: sendWindowEnd,
+      });
+      await loadCampaign();
+    } catch {
+      alert("Error saving sequence");
+    } finally {
+      setSavingSeq(false);
+    }
+  }
+
+  function updateStep(index: number, patch: Partial<SequenceStep>) {
+    setSequence((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, ...patch } : s))
+    );
+  }
+
+  function addStep() {
+    const nextStep = sequence.length + 1;
+    const lastOffset = sequence.length > 0 ? sequence[sequence.length - 1].day_offset : 0;
+    setSequence([
+      ...sequence,
+      {
+        step: nextStep,
+        day_offset: lastOffset + 3,
+        medium: "email",
+        tone_override: null,
+      },
+    ]);
+  }
+
+  function removeStep(index: number) {
+    setSequence((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((s, i) => ({ ...s, step: i + 1 }))
+    );
   }
 
   async function handleGetInsights() {
@@ -109,17 +237,21 @@ export default function CampaignDetailPage() {
         </div>
         <div className="flex gap-2">
           {campaign.status === "draft" && (
-            <button onClick={() => handleStatusChange("active")} className="text-sm px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
-              Activate
+            <button
+              onClick={handleActivate}
+              disabled={activating}
+              className="text-sm px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {activating ? "Activating..." : "Activate"}
             </button>
           )}
           {campaign.status === "active" && (
-            <button onClick={() => handleStatusChange("paused")} className="text-sm px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50">
+            <button onClick={handlePause} className="text-sm px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50">
               Pause
             </button>
           )}
           {campaign.status === "paused" && (
-            <button onClick={() => handleStatusChange("active")} className="text-sm px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+            <button onClick={handleResume} className="text-sm px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
               Resume
             </button>
           )}
@@ -147,6 +279,124 @@ export default function CampaignDetailPage() {
             <p className="text-xs text-gray-500">{stat.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Sequence Builder */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Drip Sequence</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Configure multi-touch steps. Messages queue at day offsets from activation and only send inside the window below (TCPA 8am-9pm still applies).
+            </p>
+          </div>
+          <button
+            onClick={handleSaveSequence}
+            disabled={savingSeq || campaign.status !== "draft"}
+            className="text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50"
+            title={campaign.status !== "draft" ? "Lock: edits only in draft" : ""}
+          >
+            {savingSeq ? "Saving..." : "Save"}
+          </button>
+        </div>
+
+        <div className="flex gap-4 mb-4">
+          <label className="text-xs text-gray-600">
+            Send window start (local hour)
+            <input
+              type="number"
+              min={0}
+              max={23}
+              value={sendWindowStart}
+              onChange={(e) => setSendWindowStart(Number(e.target.value))}
+              disabled={campaign.status !== "draft"}
+              className="block mt-1 w-20 border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+            />
+          </label>
+          <label className="text-xs text-gray-600">
+            Send window end
+            <input
+              type="number"
+              min={1}
+              max={24}
+              value={sendWindowEnd}
+              onChange={(e) => setSendWindowEnd(Number(e.target.value))}
+              disabled={campaign.status !== "draft"}
+              className="block mt-1 w-20 border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+            />
+          </label>
+        </div>
+
+        <div className="space-y-2">
+          {sequence.map((step, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
+            >
+              <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-semibold">
+                {step.step}
+              </div>
+              <label className="text-xs text-gray-600">
+                Day
+                <input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={step.day_offset}
+                  onChange={(e) =>
+                    updateStep(i, { day_offset: Number(e.target.value) })
+                  }
+                  disabled={campaign.status !== "draft"}
+                  className="block mt-1 w-20 border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+                />
+              </label>
+              <label className="text-xs text-gray-600">
+                Medium
+                <select
+                  value={step.medium}
+                  onChange={(e) => updateStep(i, { medium: e.target.value })}
+                  disabled={campaign.status !== "draft"}
+                  className="block mt-1 w-28 border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+                >
+                  <option value="email">Email</option>
+                  <option value="text">SMS</option>
+                  <option value="letter">Letter</option>
+                </select>
+              </label>
+              <label className="text-xs text-gray-600 flex-1">
+                Tone override
+                <input
+                  type="text"
+                  placeholder="default"
+                  value={step.tone_override ?? ""}
+                  onChange={(e) =>
+                    updateStep(i, {
+                      tone_override: e.target.value || null,
+                    })
+                  }
+                  disabled={campaign.status !== "draft"}
+                  className="block mt-1 w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+                />
+              </label>
+              <button
+                onClick={() => removeStep(i)}
+                disabled={campaign.status !== "draft" || sequence.length <= 1}
+                className="text-xs text-red-500 hover:text-red-700 disabled:text-gray-300 px-2"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {campaign.status === "draft" && (
+          <button
+            onClick={addStep}
+            className="mt-3 text-sm px-3 py-1.5 rounded-lg border border-dashed text-gray-600 hover:bg-gray-50"
+          >
+            + Add step
+          </button>
+        )}
       </div>
 
       {/* AI Insights */}
@@ -189,53 +439,92 @@ export default function CampaignDetailPage() {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Prospect</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Step</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Medium</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Subject</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Scheduled</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Compliance</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {messages.map((msg) => (
-                <>
-                  <tr
-                    key={msg.id}
-                    className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setExpandedMsg(expandedMsg === msg.id ? null : msg.id)}
-                  >
-                    <td className="px-4 py-3 text-gray-900 font-medium">
-                      <Link href={`/prospects/${msg.prospect_id}`} className="hover:text-emerald-600" onClick={(e) => e.stopPropagation()}>
-                        {msg.prospect_id.slice(0, 8)}...
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{msg.medium}</td>
-                    <td className="px-4 py-3 text-gray-600 truncate max-w-[200px]">{msg.subject || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${messageStatusColors[msg.status] || "bg-gray-100 text-gray-600"}`}>
-                        {msg.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {msg.compliance_notes ? (
-                        <span className="text-xs text-amber-600">{msg.compliance_notes}</span>
-                      ) : (
-                        <span className="text-xs text-emerald-600">Clear</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-400">{new Date(msg.created_at).toLocaleDateString()}</td>
-                  </tr>
-                  {expandedMsg === msg.id && (
-                    <tr key={`${msg.id}-body`}>
-                      <td colSpan={6} className="px-4 py-3 bg-gray-50">
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                          {msg.body}
-                        </div>
+              {messages.map((msg) => {
+                const canSendNow = msg.status === "queued" || msg.status === "draft";
+                return (
+                  <Fragment key={msg.id}>
+                    <tr
+                      className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setExpandedMsg(expandedMsg === msg.id ? null : msg.id)}
+                    >
+                      <td className="px-4 py-3 text-gray-900 font-medium">
+                        <Link
+                          href={`/prospects/${msg.prospect_id}`}
+                          className="hover:text-emerald-600"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {msg.prospect_id.slice(0, 8)}...
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 text-center">{msg.sequence_step ?? "—"}</td>
+                      <td className="px-4 py-3 text-gray-600">{msg.medium}</td>
+                      <td className="px-4 py-3 text-gray-600 truncate max-w-[200px]">{msg.subject || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            messageStatusColors[msg.status] || "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {msg.status}
+                        </span>
+                        {msg.last_error && (
+                          <div className="text-xs text-red-500 mt-1 truncate max-w-[140px]" title={msg.last_error}>
+                            {msg.last_error}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {msg.scheduled_send_time
+                          ? new Date(msg.scheduled_send_time).toLocaleString()
+                          : msg.sent_at
+                          ? `sent ${new Date(msg.sent_at).toLocaleDateString()}`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {msg.compliance_notes ? (
+                          <span className="text-xs text-amber-600">{msg.compliance_notes}</span>
+                        ) : (
+                          <span className="text-xs text-emerald-600">Clear</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {canSendNow ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSendNow(msg.id);
+                            }}
+                            className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                          >
+                            Send now
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </td>
                     </tr>
-                  )}
-                </>
-              ))}
+                    {expandedMsg === msg.id && (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-3 bg-gray-50">
+                          <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                            {msg.body}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

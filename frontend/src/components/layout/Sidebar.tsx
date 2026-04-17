@@ -10,6 +10,7 @@ const navItems = [
   { href: "/contacts", label: "Contacts", icon: "👥" },
   { href: "/prospects", label: "Prospects", icon: "🎯" },
   { href: "/outreach", label: "Outreach", icon: "📬" },
+  { href: "/map", label: "Farm Map", icon: "🗺️" },
 ];
 
 export default function Sidebar() {

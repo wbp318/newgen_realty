@@ -48,6 +48,10 @@ class Property(Base):
     # AI-generated content
     ai_description = Column(Text)
     ai_description_generated_at = Column(DateTime)
+    # Geographic coordinates (Phase 4A)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    geocoded_at = Column(DateTime)
     # Metadata
     features = Column(JSON, default=dict)
     photos = Column(JSON, default=list)

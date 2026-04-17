@@ -192,7 +192,32 @@ export interface ProspectScoreResult {
   suggested_outreach_type: string | null;
 }
 
+export interface ProspectGeoPoint {
+  id: string;
+  latitude: number;
+  longitude: number;
+  property_address: string;
+  property_city: string | null;
+  property_state: string | null;
+  prospect_type: string;
+  status: string;
+  ai_prospect_score: number | null;
+}
+
+export interface GeocodeBackfillResult {
+  scanned: number;
+  updated: number;
+  failed: number;
+}
+
 // Outreach
+export interface SequenceStep {
+  step: number;
+  day_offset: number;
+  medium: string;
+  tone_override: string | null;
+}
+
 export interface OutreachCampaign {
   id: string;
   name: string;
@@ -209,6 +234,11 @@ export interface OutreachCampaign {
   replied_count: number;
   ai_campaign_insights: string | null;
   ai_insights_generated_at: string | null;
+  sequence_config: SequenceStep[] | null;
+  send_window_start: number | null;
+  send_window_end: number | null;
+  daily_send_cap: number | null;
+  started_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -221,14 +251,29 @@ export interface OutreachMessage {
   subject: string | null;
   body: string;
   status: string;
+  scheduled_send_time: string | null;
+  sequence_step: number | null;
   sent_at: string | null;
   delivered_at: string | null;
   opened_at: string | null;
   replied_at: string | null;
+  provider: string | null;
+  provider_message_id: string | null;
+  last_error: string | null;
+  retry_count: number | null;
+  extra_data: Record<string, unknown> | null;
   consent_verified: boolean;
   dnc_cleared: boolean;
   compliance_notes: string | null;
   created_at: string;
+}
+
+export interface ActivateCampaignResult {
+  campaign_id: string;
+  status: string;
+  queued: number;
+  skipped_existing: number;
+  blocked: number;
 }
 
 export interface GeneratedMessage {
