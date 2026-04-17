@@ -51,6 +51,7 @@ export interface Activity {
   description: string | null;
   contact_id: string | null;
   property_id: string | null;
+  prospect_id: string | null;
   extra_data: Record<string, unknown> | null;
   created_at: string;
 }
