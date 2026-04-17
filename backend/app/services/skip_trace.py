@@ -21,8 +21,8 @@ from app.config import settings
 
 
 # Provider selection — defaults to free/stub
-SKIP_TRACE_PROVIDER = getattr(settings, "SKIP_TRACE_PROVIDER", "free")
-SKIP_TRACE_API_KEY = getattr(settings, "SKIP_TRACE_API_KEY", "")
+SKIP_TRACE_PROVIDER = settings.SKIP_TRACE_PROVIDER
+SKIP_TRACE_API_KEY = settings.SKIP_TRACE_API_KEY
 
 
 def is_configured() -> bool:

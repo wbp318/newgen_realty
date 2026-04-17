@@ -1,4 +1,5 @@
-import uuid
+import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
@@ -29,11 +30,11 @@ from app.services import county_data
 from app.services import geocoder
 from app.services.compliance import validate_outreach_compliance
 
+logger = logging.getLogger(__name__)
+
 
 def _apply_geocode(prospect: Prospect) -> None:
     """Best-effort geocoding — mutates prospect in place, silently no-ops on fail."""
-    from datetime import datetime
-
     result = geocoder.geocode(
         prospect.property_address,
         prospect.property_city,
@@ -367,8 +368,6 @@ async def geocode_backfill(
     Respects Nominatim's 1 req/sec limit via the geocoder service, so ~50 prospects
     takes ~55s. Use small batches.
     """
-    from datetime import datetime
-
     missing = (
         await db.execute(
             select(Prospect)
@@ -492,7 +491,7 @@ async def enrich_prospect(prospect_id: str, db: AsyncSession = Depends(get_db)):
         if not prospect.mailing_address and owner.get("mailing_address"):
             prospect.mailing_address = owner["mailing_address"]
 
-    # Try to get AVM
+    # Try to get AVM (optional enrichment — log and continue on failure)
     try:
         avm = prospect_data.get_avm(prospect.property_address)
         if avm:
@@ -500,7 +499,7 @@ async def enrich_prospect(prospect_id: str, db: AsyncSession = Depends(get_db)):
             existing.update(avm)
             prospect.property_data = existing
     except Exception:
-        pass  # AVM is optional enrichment
+        logger.warning("AVM enrichment failed for prospect %s", prospect_id, exc_info=True)
 
     await db.commit()
     await db.refresh(prospect)
@@ -679,7 +678,6 @@ async def batch_dnc_check(
     db: AsyncSession = Depends(get_db),
 ):
     """Check DNC list status for multiple prospects (max 200)."""
-    from datetime import datetime
     from app.services.prospect_enrichment import check_dnc_list
 
     result = await db.execute(select(Prospect).where(Prospect.id.in_(prospect_ids)))
