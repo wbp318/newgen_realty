@@ -13,9 +13,11 @@ AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives 
 | CRM + pipeline | Follow Up Boss | $69 | Contacts, prospects, activities, lead scoring |
 | Write outreach | ChatGPT (copy-paste) | $20 | AI-personalized per prospect type + situation |
 | Track campaigns | Mailchimp / spreadsheet | $0-50 | Campaign management with message tracking |
+| Scheduled drip sending | ActiveCampaign / Lemlist | $49-99 | Multi-step drip scheduler with Resend + Twilio, TCPA-gated |
+| Geographic prospecting | Mapright / Landglide | $25-50 | Farm map with heat layer, color-coded score markers |
 | Market analysis | MLS + manual | $0 | AI + Realty Mole real market data |
 | Compliance checking | Manual / hope | $0 | TCPA baked into every outreach action |
-| **Total** | | **$300+/month** | **One platform** |
+| **Total** | | **$400+/month** | **One platform** |
 
 ## Documentation
 
@@ -70,8 +72,10 @@ git --version       # Should show 2.x+
 | `REALTY_MOLE_API_KEY` | Real comparable sales data for AI pricing analysis | 1. Go to [rapidapi.com](https://rapidapi.com/realtymole/api/realty-mole-property-api) 2. Create account 3. Subscribe to Realty Mole Property API 4. Copy your RapidAPI key from the dashboard | Free tier available (50 requests/mo), paid plans from $20/mo |
 | `ATTOM_API_KEY` | Public record prospect searching (absentee owners, pre-foreclosures, tax delinquent, etc.) | 1. Go to [api.gateway.attomdata.com](https://api.gateway.attomdata.com/) 2. Create account 3. Subscribe to a plan 4. Copy your API key | Starting ~$95/mo |
 | `SKIP_TRACE_API_KEY` | Find phone/email for prospects with no contact info | 1. Go to [batchskiptracing.com](https://www.batchskiptracing.com/) 2. Create account 3. Add credits 4. Copy your API key 5. Also set `SKIP_TRACE_PROVIDER=batchskiptracing` in `.env` | ~$0.15 per record |
+| `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | Actually send drip campaign emails (not just generate them) | 1. Go to [resend.com](https://resend.com) 2. Create account, verify a domain 3. Create an API key from the dashboard | Free up to 3K emails/mo, then $20/mo for 50K |
+| `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM_NUMBER` | Send drip SMS + auto-handle STOP replies | 1. Go to [twilio.com/console](https://twilio.com/console) 2. Buy a 10DLC number 3. Copy Account SID, Auth Token | ~$1/mo per number + $0.0079/SMS |
 
-You can add any of these later — the platform works without them, you just won't have access to those specific features.
+You can add any of these later — the platform works without them, you just won't have access to those specific features. The drip scheduler queues messages either way; without Resend/Twilio keys they stay in QUEUED state.
 
 **Step 1 — Download the code.** Open **PowerShell** (search "PowerShell" in the Start menu). Navigate to your Documents folder:
 ```powershell
@@ -255,15 +259,31 @@ Supports three mediums:
 - **Letter** — Full letter with greeting and sign-off, highest response rate for motivated sellers, no TCPA consent required
 - **Text** — Under 300 characters, requires written consent under TCPA
 
-### Outreach Campaigns
+### Outreach Campaigns + Drip Send Engine
 
-Organize outreach at scale:
+Organize and *actually send* outreach at scale:
 - Create campaigns by type (email, letter, text) and assign prospect lists
+- **Multi-touch drip sequences** — Configure steps: day 0 email → day 3 SMS → day 7 email → etc. Each step can override tone.
+- **Per-campaign send window** — Only dispatch between e.g. 9am-6pm local (inside TCPA 8am-9pm)
 - **Bulk message generation** — AI generates personalized messages for every prospect in a list
-- **Compliance checking** — Every message is checked for consent status, DNC list, contact hours, and opt-out status before generation
-- **Message tracking** — Track status: draft → sent → delivered → opened → replied
+- **Compliance checking at dispatch** — Every message is re-validated against consent status, DNC list, contact hours, and opt-out status at the moment of send, not just at generation
+- **Automated send via Resend (email) + Twilio (SMS)** — APScheduler runs inside the FastAPI process and sweeps queued messages every 60s
+- **Daily send caps** — Global + per-campaign limits prevent accidental mass sends
+- **Inbound reply handling** — Twilio webhook auto-processes STOP/UNSUBSCRIBE keywords (revokes consent, cancels future queued SMS for that prospect). Resend webhook updates delivered/opened/bounced statuses.
+- **Message tracking** — Status: draft → queued → sent → delivered → opened → replied (or failed/bounced)
+- **Manual send-now override** — Force-dispatch a single message outside the drip schedule (still compliance-gated)
 - **AI Campaign Insights** — Claude analyzes campaign performance and suggests optimizations
-- **Campaign management** — Draft, activate, pause, complete lifecycle
+- **Campaign management** — Draft, activate (expands sequence into queued messages), pause, complete lifecycle
+
+### Farm Map (Geographic Intelligence)
+
+Leaflet + OpenStreetMap view of your entire prospect pipeline:
+- **Auto-geocoding** — New prospects from ATTOM or manual entry are geocoded via Nominatim (free) on creation
+- **Heat layer** — Motivation density at a glance; darker = more prospects / higher scores
+- **Color-coded markers** — Red (score ≥80), amber (60-79), yellow (40-59), blue (<40 or unscored)
+- **Filters** — Min score, state, prospect type (multi-select), status
+- **Backfill button** — Geocode historical prospects in batches of 50 (~1 min each due to Nominatim rate limits)
+- **Auto-fit bounds** — Map centers/zooms to your actual prospect footprint on load
 
 ### TCPA Compliance (Built In, Not Bolted On)
 
@@ -322,6 +342,11 @@ The platform dynamically labels "Parish" for LA and "County" for AR/MS throughou
 | Market Data | Realty Mole Property API via RapidAPI (comparable sales) |
 | Skip Tracing | Pluggable providers (BatchSkipTracing.com integration ready) |
 | County Data | LA parish assessor portals, ARCountyData.com, MS chancery clerks |
+| Email Send | Resend transactional email API |
+| SMS Send | Twilio SMS (with webhook-driven STOP opt-out handling) |
+| Drip Scheduler | APScheduler AsyncIOScheduler (in-process, runs in FastAPI lifespan) |
+| Geocoding | OpenStreetMap Nominatim (free, 1.1s throttle) |
+| Mapping | Leaflet + react-leaflet 5 + leaflet.heat (OSM tiles) |
 | Database | SQLite (local dev) / PostgreSQL (Docker production) |
 | Infra | Docker Compose |
 
@@ -394,20 +419,24 @@ This is how all the pieces connect — from finding a prospect to closing a deal
 6. AI GENERATE OUTREACH (tone-adapted per type)
    Business-focused for absentee, empathetic for foreclosure, sensitive for probate...
                     ↓
-7. OUTREACH CAMPAIGNS (organize + track)
-   Bulk generate, compliance check, send, track delivery + responses
+7. OUTREACH CAMPAIGNS (organize + drip)
+   Define multi-touch sequence (day 0 email → day 3 SMS → ...), bulk generate
                     ↓
-8. AI CAMPAIGN INSIGHTS (optimize)
+8. DRIP SEND ENGINE (APScheduler + Resend + Twilio)
+   Queued messages dispatch automatically on schedule, TCPA-gated per message.
+   Inbound STOP replies auto-opt-out; delivered/opened events webhook back.
+                    ↓
+9. AI CAMPAIGN INSIGHTS (optimize)
    What's working, what to change, specific suggestions
                     ↓
-9. CONVERT TO CONTACT (prospect → CRM)
-   One-click conversion preserves all data, links records
+10. CONVERT TO CONTACT (prospect → CRM)
+    One-click conversion preserves all data, links records
                     ↓
-10. FULL CRM (score → match → communicate → close)
+11. FULL CRM (score → match → communicate → close)
     AI lead scoring, property matching, communication drafting, activity tracking
 ```
 
-## API Endpoints (55+)
+## API Endpoints (65+)
 
 ### Properties (5)
 | Method | Endpoint | Description |
@@ -427,15 +456,17 @@ This is how all the pieces connect — from finding a prospect to closing a deal
 | PUT | `/api/contacts/{id}` | Update contact (auto-logs activity) |
 | DELETE | `/api/contacts/{id}` | Delete contact |
 
-### Prospects (15)
+### Prospects (17)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/prospects` | List prospects (filterable by type, status, state, parish, score range, consent, source, text search, sortable by score or date) |
-| POST | `/api/prospects` | Create prospect manually |
+| POST | `/api/prospects` | Create prospect manually (auto-geocodes address via Nominatim) |
 | GET | `/api/prospects/{id}` | Get prospect detail with all data |
 | PUT | `/api/prospects/{id}` | Update prospect (auto-logs activity) |
 | DELETE | `/api/prospects/{id}` | Delete prospect |
-| POST | `/api/prospects/search` | Search ATTOM for prospects — auto-imports with deduplication |
+| GET | `/api/prospects/geo` | Lightweight geo points for map rendering (bounds + score/state/type/status filters) |
+| POST | `/api/prospects/geocode-backfill` | Fill in lat/lng for prospects missing coordinates (~1s per row) |
+| POST | `/api/prospects/search` | Search ATTOM for prospects — auto-imports with deduplication + geocoding |
 | POST | `/api/prospects/{id}/enrich` | Enrich with ATTOM property detail + AVM estimate |
 | POST | `/api/prospects/{id}/convert` | Convert prospect to CRM contact (one-click) |
 | POST | `/api/prospects/{id}/skip-trace` | Skip trace — find phone/email/address |
@@ -449,18 +480,23 @@ This is how all the pieces connect — from finding a prospect to closing a deal
 | GET | `/api/prospects/lists/{id}` | Get prospect list detail |
 | PUT | `/api/prospects/lists/{id}` | Update prospect list |
 
-### Outreach (9)
+### Outreach (14)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/outreach/campaigns` | List outreach campaigns (filterable by status, type) |
-| POST | `/api/outreach/campaigns` | Create campaign |
+| POST | `/api/outreach/campaigns` | Create campaign (supports sequence_config, send_window_start/end, daily_send_cap) |
 | GET | `/api/outreach/campaigns/{id}` | Get campaign detail with stats |
-| PUT | `/api/outreach/campaigns/{id}` | Update campaign (status, template, etc.) |
+| PUT | `/api/outreach/campaigns/{id}` | Update campaign (status, template, sequence_config, send windows) |
+| POST | `/api/outreach/campaigns/{id}/activate` | Expand sequence_config into queued messages (idempotent) |
+| POST | `/api/outreach/campaigns/{id}/pause` | Pause campaign (queued messages resume on re-activate) |
 | GET | `/api/outreach/campaigns/{id}/messages` | List campaign messages (filterable by status) |
 | POST | `/api/outreach/generate-message` | AI-generate personalized outreach for one prospect |
 | POST | `/api/outreach/campaigns/{id}/generate-all` | Bulk-generate AI messages for entire prospect list |
 | PUT | `/api/outreach/messages/{id}/status` | Update message status (sent/delivered/opened/replied) — auto-updates campaign stats |
+| POST | `/api/outreach/messages/{id}/send-now` | Force-dispatch a single message immediately (still compliance-gated) |
 | POST | `/api/outreach/campaigns/{id}/insights` | AI campaign performance analytics |
+| POST | `/api/outreach/webhooks/resend` | Resend delivery/open/bounce/complaint webhook (HMAC-verified when secret set) |
+| POST | `/api/outreach/webhooks/twilio` | Twilio status callbacks + inbound SMS with STOP auto-opt-out |
 
 ### Activities (4)
 | Method | Endpoint | Description |
@@ -548,6 +584,10 @@ backend/
       county_data.py         # Free county/parish portal scrapers (LA, AR, MS)
       skip_trace.py          # Skip tracing service (pluggable providers)
       compliance.py          # TCPA enforcement (contact hours, opt-out, DNC, medium rules)
+      scheduler.py           # APScheduler drip-send sweep (compliance-gated dispatch + retries)
+      email_sender.py        # Resend transactional email sender
+      sms_sender.py          # Twilio SMS sender (with E.164 normalization)
+      geocoder.py            # Nominatim geocoder (1.1s throttle, no API key)
     prompts/
       system_prompts.py      # 10 system prompts (agent, listing, comp, comm, lead score,
                              #   property match, prospect score, outreach, campaign insights,
@@ -567,17 +607,19 @@ frontend/
       prospects/search/page.tsx # ATTOM public record search + import
       prospects/[id]/page.tsx # Prospect detail + scoring + outreach + enrichment
       outreach/page.tsx       # Campaign dashboard + create
-      outreach/[id]/page.tsx  # Campaign detail + messages + insights
+      outreach/[id]/page.tsx  # Campaign detail + drip sequence builder + messages + insights
+      map/page.tsx            # Farm Map (Leaflet heat + markers, SSR-disabled)
     components/
-      layout/Sidebar.tsx      # Navigation (Dashboard, AI, Properties, Contacts, Prospects, Outreach)
+      layout/Sidebar.tsx      # Navigation (Dashboard, AI, Properties, Contacts, Prospects, Outreach, Farm Map)
+      map/ProspectMap.tsx     # Leaflet + react-leaflet map with heat layer, popups, auto-fit
       ui/LeadScoreBadge.tsx   # Contact score badge (hot/warm/moderate/cool/cold)
       ui/ProspectScoreBadge.tsx # Prospect score badge (highly motivated/strong/moderate/low/unlikely)
       ui/StatusBadge.tsx       # Status + type badges
       ui/FilterBar.tsx         # Reusable filter bar (text, select)
       ui/ActivityTimeline.tsx  # Activity timeline display
     lib/
-      api.ts                  # Axios client with 40+ API functions
-      types.ts                # 20+ TypeScript interfaces mirroring backend schemas
+      api.ts                  # Axios client with 50+ API functions
+      types.ts                # 25+ TypeScript interfaces mirroring backend schemas
 ```
 
 ## Environment Variables
@@ -593,6 +635,19 @@ frontend/
 | `ATTOM_API_KEY` | No | — | Prospecting engine API ([attomdata.com](https://www.attomdata.com/)) |
 | `SKIP_TRACE_PROVIDER` | No | `free` | Skip trace provider: `free` (stub) or `batchskiptracing` |
 | `SKIP_TRACE_API_KEY` | No | — | API key for paid skip trace provider |
+| `RESEND_API_KEY` | No | — | Resend API key for transactional email sending |
+| `RESEND_FROM_EMAIL` | No | — | Verified from-address for Resend (e.g. `agent@yourdomain.com`) |
+| `TWILIO_ACCOUNT_SID` | No | — | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | No | — | Twilio auth token |
+| `TWILIO_FROM_NUMBER` | No | — | Twilio phone number in E.164 format (e.g. `+12255551234`) |
+| `INBOUND_WEBHOOK_SECRET` | No | — | HMAC secret for validating Resend/Twilio webhooks. Unset = accept all (dev only). |
+| `SCHEDULER_ENABLED` | No | `true` | Enable the drip scheduler (disable in tests) |
+| `SCHEDULER_TICK_SECONDS` | No | `60` | How often the scheduler sweeps for due messages |
+| `SCHEDULER_BATCH_SIZE` | No | `50` | Max messages dispatched per tick |
+| `DAILY_SEND_CAP_EMAIL` | No | `500` | Global daily email cap (per-campaign override via `daily_send_cap`) |
+| `DAILY_SEND_CAP_SMS` | No | `200` | Global daily SMS cap |
+| `GEOCODE_PROVIDER` | No | `nominatim` | Geocoder: `nominatim` (free) |
+| `GEOCODE_USER_AGENT` | No | `newgen-realty/0.2` | User-Agent sent to Nominatim (required by their ToS) |
 | `MAX_TOKENS_CHAT` | No | `1024` | Max tokens for chat responses |
 | `MAX_TOKENS_LISTING` | No | `1500` | Max tokens for listing generation |
 | `MAX_TOKENS_ANALYSIS` | No | `2000` | Max tokens for analysis responses |
