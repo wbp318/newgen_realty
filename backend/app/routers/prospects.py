@@ -294,6 +294,20 @@ async def create_prospect(data: ProspectCreate, db: AsyncSession = Depends(get_d
     return prospect
 
 
+@router.get("/county-sources")
+async def list_county_sources():
+    """List available county/parish data sources by state.
+
+    Defined ahead of `/{prospect_id}` so FastAPI doesn't treat the literal
+    string "county-sources" as a prospect ID.
+    """
+    return {
+        "LA": county_data.get_supported_counties("LA"),
+        "AR": county_data.get_supported_counties("AR"),
+        "MS": county_data.get_supported_counties("MS"),
+    }
+
+
 @router.get("/geo", response_model=list[ProspectGeoPoint])
 async def get_prospect_geo(
     min_lat: Optional[float] = Query(None, ge=-90, le=90),
@@ -737,11 +751,3 @@ async def search_county_records_endpoint(
     }
 
 
-@router.get("/county-sources")
-async def list_county_sources():
-    """List available county/parish data sources by state."""
-    return {
-        "LA": county_data.get_supported_counties("LA"),
-        "AR": county_data.get_supported_counties("AR"),
-        "MS": county_data.get_supported_counties("MS"),
-    }

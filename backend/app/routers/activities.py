@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/activities", tags=["activities"])
 async def list_activities(
     contact_id: Optional[str] = Query(None),
     property_id: Optional[str] = Query(None),
+    prospect_id: Optional[str] = Query(None),
     activity_type: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(get_db),
@@ -26,6 +27,8 @@ async def list_activities(
         query = query.where(Activity.contact_id == contact_id)
     if property_id:
         query = query.where(Activity.property_id == property_id)
+    if prospect_id:
+        query = query.where(Activity.prospect_id == prospect_id)
     if activity_type:
         query = query.where(Activity.activity_type == activity_type)
     query = query.limit(limit)
