@@ -38,6 +38,13 @@ cd pentest && pip install -r requirements.txt
 python run_all.py                                    # all tests
 python test_input_validation.py                      # single suite
 python run_all.py --base-url http://other:8000       # remote target
+
+# Run e2e suite (backend + frontend must be running; auto-falls-back to API-only if frontend is down)
+cd e2e && python -m venv .venv && source .venv/Scripts/activate && pip install -r requirements.txt && playwright install chromium
+./run_e2e.sh                                         # Git Bash — everything
+./run_e2e.sh api/                                    # API-only, no browser
+./run_e2e.sh -k prospect                             # pytest filter
+.\run_e2e.ps1                                        # PowerShell equivalent
 ```
 
 Backend: http://localhost:8000 | Frontend: http://localhost:3000 | API Docs: http://localhost:8000/docs
@@ -100,8 +107,8 @@ Twilio webhooks require `python-multipart` (listed in `requirements.txt`) for fo
 Every Prospect and Property has optional `latitude`/`longitude`/`geocoded_at` (Prospect uses `property_latitude`/`property_longitude`). `_apply_geocode()` in `routers/prospects.py` is called on both manual `POST /api/prospects` and ATTOM search imports — failures are silent (the row is still created, just without coordinates).
 
 - `POST /api/prospects/geocode-backfill?limit=N` fills missing coords; ~1s per row.
-- `GET /api/prospects/geo` returns lightweight `ProspectGeoPoint[]` filtered by bounds, min_score, state, status, and comma-separated types (max 10).
-- Frontend `/map` dynamically imports the Leaflet map client-side (`components/map/ProspectMap.tsx`) with OSM tiles (no API key), a heat overlay, and color-coded `CircleMarker`s. Auto-fits bounds to the loaded points on first render.
+- `GET /api/prospects/geo` returns lightweight `ProspectGeoPoint[]` filtered by bounds, min_score, state, parish, status, and comma-separated types (max 10).
+- Frontend `/map` dynamically imports the Leaflet map client-side (`components/map/ProspectMap.tsx`). Features: basemap toggle (OSM street or Esri World Imagery satellite — both free, no API keys), heat overlay, color-coded `CircleMarker`s, and a parish/county boundary overlay fetched from the static asset `frontend/public/parishes-la-ar-ms.geojson` (LA/AR/MS only, from Census TIGER FIPS-filtered data). Clicking a parish filters the visible prospects to that parish via the `parish` query param. Auto-fits bounds to the loaded points on first render.
 
 ### Prospecting Engine
 

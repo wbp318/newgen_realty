@@ -316,6 +316,7 @@ async def get_prospect_geo(
     max_lng: Optional[float] = Query(None, ge=-180, le=180),
     min_score: Optional[float] = Query(None, ge=0, le=100),
     state: Optional[str] = Query(None, max_length=2),
+    parish: Optional[str] = Query(None, max_length=100),
     status: Optional[str] = Query(None, max_length=50),
     types: Optional[str] = Query(None, max_length=100, description="Comma-separated prospect types"),
     limit: int = Query(2000, le=5000),
@@ -329,6 +330,7 @@ async def get_prospect_geo(
         Prospect.property_address,
         Prospect.property_city,
         Prospect.property_state,
+        Prospect.property_parish,
         Prospect.prospect_type,
         Prospect.status,
         Prospect.ai_prospect_score,
@@ -348,6 +350,8 @@ async def get_prospect_geo(
         query = query.where(Prospect.ai_prospect_score >= min_score)
     if state:
         query = query.where(Prospect.property_state == state)
+    if parish:
+        query = query.where(Prospect.property_parish == parish)
     if status:
         query = query.where(Prospect.status == status)
     if types:
@@ -364,6 +368,7 @@ async def get_prospect_geo(
             property_address=r.property_address,
             property_city=r.property_city,
             property_state=r.property_state,
+            property_parish=r.property_parish,
             prospect_type=r.prospect_type,
             status=r.status,
             ai_prospect_score=r.ai_prospect_score,

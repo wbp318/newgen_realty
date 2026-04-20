@@ -2,21 +2,50 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet.heat";
 import {
   CircleMarker,
+  GeoJSON,
   MapContainer,
   Popup,
   TileLayer,
   useMap,
 } from "react-leaflet";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
 import Link from "next/link";
 import type { ProspectGeoPoint } from "@/lib/types";
 
 // Default center: Baton Rouge, LA
 const DEFAULT_CENTER: [number, number] = [30.4515, -91.1871];
+
+type Basemap = "street" | "satellite";
+
+interface ParishProps {
+  state: "LA" | "AR" | "MS";
+  name: string;
+  lsad: string;
+  fips: string;
+}
+
+const BASEMAPS: Record<
+  Basemap,
+  { url: string; attribution: string; maxZoom: number }
+> = {
+  street: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution:
+      'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    maxZoom: 19,
+  },
+};
 
 function scoreColor(score: number | null): string {
   if (score == null) return "#3b82f6";
@@ -90,17 +119,97 @@ function HeatLayer({ points, enabled }: { points: HeatPoint[]; enabled: boolean 
   return null;
 }
 
+interface ParishOverlayProps {
+  data: FeatureCollection<Geometry, ParishProps> | null;
+  selected: { state: string; name: string } | null;
+  onSelect: (sel: { state: string; name: string } | null) => void;
+  basemap: Basemap;
+}
+
+function ParishOverlay({ data, selected, onSelect, basemap }: ParishOverlayProps) {
+  // Force remount when basemap changes so line color stays legible
+  // against the new tiles.
+  const key = `${basemap}-${data?.features.length ?? 0}`;
+  if (!data) return null;
+
+  const lineColor = basemap === "satellite" ? "#ffffff" : "#1f2937";
+
+  return (
+    <GeoJSON
+      key={key}
+      data={data}
+      style={(feat) => {
+        const p = feat?.properties as ParishProps | undefined;
+        const isSelected =
+          !!selected &&
+          !!p &&
+          p.state === selected.state &&
+          p.name === selected.name;
+        return {
+          color: lineColor,
+          weight: isSelected ? 2.5 : 0.8,
+          opacity: isSelected ? 0.9 : 0.5,
+          fillColor: isSelected ? "#10b981" : "#000000",
+          fillOpacity: isSelected ? 0.18 : 0.0,
+        };
+      }}
+      onEachFeature={(feat: Feature<Geometry, ParishProps>, layer) => {
+        const p = feat.properties;
+        if (!p) return;
+        const label = p.lsad === "Parish" ? "Parish" : "County";
+        layer.bindTooltip(`${p.name} ${label} (${p.state})`, { sticky: true });
+        layer.on({
+          click: () => {
+            const already =
+              !!selected &&
+              selected.state === p.state &&
+              selected.name === p.name;
+            onSelect(already ? null : { state: p.state, name: p.name });
+          },
+        });
+      }}
+    />
+  );
+}
+
 interface ProspectMapProps {
   points: ProspectGeoPoint[];
   showHeat: boolean;
   showMarkers: boolean;
+  showParishes: boolean;
+  basemap: Basemap;
+  selectedParish: { state: string; name: string } | null;
+  onSelectParish: (sel: { state: string; name: string } | null) => void;
 }
 
 export default function ProspectMap({
   points,
   showHeat,
   showMarkers,
+  showParishes,
+  basemap,
+  selectedParish,
+  onSelectParish,
 }: ProspectMapProps) {
+  const [parishData, setParishData] =
+    useState<FeatureCollection<Geometry, ParishProps> | null>(null);
+
+  useEffect(() => {
+    if (!showParishes || parishData) return;
+    let cancelled = false;
+    fetch("/parishes-la-ar-ms.geojson")
+      .then((r) => r.json())
+      .then((d: FeatureCollection<Geometry, ParishProps>) => {
+        if (!cancelled) setParishData(d);
+      })
+      .catch(() => {
+        // silent; overlay just stays empty
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showParishes, parishData]);
+
   const center = useMemo<[number, number]>(() => {
     if (points.length === 0) return DEFAULT_CENTER;
     const lat = points.reduce((s, p) => s + p.latitude, 0) / points.length;
@@ -121,6 +230,8 @@ export default function ProspectMap({
     [points]
   );
 
+  const tiles = BASEMAPS[basemap];
+
   return (
     <MapContainer
       center={center}
@@ -129,10 +240,20 @@ export default function ProspectMap({
       className="h-full w-full rounded-xl"
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        key={basemap}
+        attribution={tiles.attribution}
+        url={tiles.url}
+        maxZoom={tiles.maxZoom}
       />
       <FitToPoints points={points} />
+      {showParishes && (
+        <ParishOverlay
+          data={parishData}
+          selected={selectedParish}
+          onSelect={onSelectParish}
+          basemap={basemap}
+        />
+      )}
       <HeatLayer points={heatPoints} enabled={showHeat} />
       {showMarkers &&
         points.map((p) => (

@@ -25,23 +25,34 @@ const PROSPECT_TYPES = [
   "tax_delinquent",
 ];
 
+type Basemap = "street" | "satellite";
+type ParishSel = { state: string; name: string } | null;
+
 export default function FarmMapPage() {
   const [points, setPoints] = useState<ProspectGeoPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [showHeat, setShowHeat] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
+  const [showParishes, setShowParishes] = useState(true);
+  const [basemap, setBasemap] = useState<Basemap>("street");
   const [minScore, setMinScore] = useState<number>(0);
   const [state, setState] = useState<string>("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedParish, setSelectedParish] = useState<ParishSel>(null);
   const [backfilling, setBackfilling] = useState(false);
 
-  async function load() {
+  async function load(parishOverride?: ParishSel | undefined) {
     setLoading(true);
     try {
       const params: Record<string, string | number> = { limit: 2000 };
       if (minScore > 0) params.min_score = minScore;
       if (state) params.state = state;
       if (selectedTypes.length > 0) params.types = selectedTypes.join(",");
+      const parish = parishOverride !== undefined ? parishOverride : selectedParish;
+      if (parish) {
+        params.parish = parish.name;
+        params.state = parish.state;
+      }
       const res = await getProspectGeoPoints(params);
       setPoints(res.data);
     } catch {
@@ -78,6 +89,11 @@ export default function FarmMapPage() {
     );
   }
 
+  function handleSelectParish(sel: ParishSel) {
+    setSelectedParish(sel);
+    load(sel);
+  }
+
   const stats = useMemo(() => {
     const hot = points.filter(
       (p) => p.ai_prospect_score != null && p.ai_prospect_score >= 80
@@ -88,13 +104,17 @@ export default function FarmMapPage() {
     return { total: points.length, hot, warm };
   }, [points]);
 
+  const parishLabel = selectedParish
+    ? `${selectedParish.name} ${selectedParish.state === "LA" ? "Parish" : "County"} (${selectedParish.state})`
+    : null;
+
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col">
       <div className="mb-4 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Farm Map</h1>
           <p className="text-sm text-gray-500">
-            Your farm area — where your leads live. Heat shows density; markers are color-coded by score.
+            Your farm area — where your leads live. Heat shows density; markers are color-coded by score. Click a parish to filter.
           </p>
         </div>
         <button
@@ -130,6 +150,17 @@ export default function FarmMapPage() {
             <option value="LA">LA</option>
             <option value="AR">AR</option>
             <option value="MS">MS</option>
+          </select>
+        </label>
+        <label className="text-xs text-gray-600">
+          Basemap
+          <select
+            value={basemap}
+            onChange={(e) => setBasemap(e.target.value as Basemap)}
+            className="block mt-1 w-28 border rounded px-2 py-1 text-sm"
+          >
+            <option value="street">Street</option>
+            <option value="satellite">Satellite</option>
           </select>
         </label>
         <div className="text-xs text-gray-600 flex-1">
@@ -170,15 +201,39 @@ export default function FarmMapPage() {
             />
             Markers
           </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={showParishes}
+              onChange={(e) => setShowParishes(e.target.checked)}
+            />
+            Parish lines
+          </label>
         </div>
         <button
-          onClick={load}
+          onClick={() => load()}
           disabled={loading}
           className="text-sm px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           {loading ? "Loading..." : "Apply"}
         </button>
       </div>
+
+      {parishLabel && (
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-xs text-gray-500">Filtered to:</span>
+          <span className="inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {parishLabel}
+            <button
+              onClick={() => handleSelectParish(null)}
+              className="text-emerald-700 hover:text-emerald-900"
+              aria-label="Clear parish filter"
+            >
+              ×
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -198,7 +253,7 @@ export default function FarmMapPage() {
 
       {/* Map */}
       <div className="flex-1 bg-white rounded-xl shadow-sm overflow-hidden">
-        {points.length === 0 && !loading ? (
+        {points.length === 0 && !loading && !showParishes ? (
           <div className="h-full flex items-center justify-center text-gray-400 text-sm">
             No geocoded prospects yet. Click &quot;Geocode missing&quot; to populate coordinates.
           </div>
@@ -207,6 +262,10 @@ export default function FarmMapPage() {
             points={points}
             showHeat={showHeat}
             showMarkers={showMarkers}
+            showParishes={showParishes}
+            basemap={basemap}
+            selectedParish={selectedParish}
+            onSelectParish={handleSelectParish}
           />
         )}
       </div>

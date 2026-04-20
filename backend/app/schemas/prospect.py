@@ -96,6 +96,7 @@ class ProspectGeoPoint(BaseModel):
     property_address: str
     property_city: Optional[str] = None
     property_state: Optional[str] = None
+    property_parish: Optional[str] = None
     prospect_type: str
     status: str
     ai_prospect_score: Optional[float] = None

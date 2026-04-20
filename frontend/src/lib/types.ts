@@ -200,6 +200,7 @@ export interface ProspectGeoPoint {
   property_address: string;
   property_city: string | null;
   property_state: string | null;
+  property_parish: string | null;
   prospect_type: string;
   status: string;
   ai_prospect_score: number | null;
