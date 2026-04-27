@@ -68,7 +68,7 @@ The `AIAssistant` singleton in `services/ai_assistant.py` wraps the Anthropic cl
 ### AI Model Split
 
 Two models are used to balance quality and cost:
-- **`AI_MODEL`** (Sonnet 4, default) — scoring, outreach, listings, comps, communications, matching. Quality-critical features.
+- **`AI_MODEL`** (Sonnet 4.6, default) — scoring, outreach, listings, comps, communications, matching. Quality-critical features.
 - **`AI_MODEL_FAST`** (Haiku 4.5, default) — chat and dashboard insights. High-volume, speed-priority features.
 
 Chat endpoint and dashboard insights pass `model=settings.AI_MODEL_FAST` to `assistant.chat()`. All other services use the default (Sonnet).
@@ -213,7 +213,7 @@ Key optional vars:
 - `SCHEDULER_ENABLED` (default: `true`), `SCHEDULER_TICK_SECONDS` (default: 60), `SCHEDULER_BATCH_SIZE` (default: 50)
 - `DAILY_SEND_CAP_EMAIL` / `DAILY_SEND_CAP_SMS` — global daily caps (overridable per-campaign via `daily_send_cap`)
 - `GEOCODE_PROVIDER` (default: `nominatim`), `GEOCODE_USER_AGENT` (required by Nominatim ToS)
-- `AI_MODEL` — Sonnet for quality tasks (default: `claude-sonnet-4-20250514`)
+- `AI_MODEL` — Sonnet for quality tasks (default: `claude-sonnet-4-6`)
 - `AI_MODEL_FAST` — Haiku for speed tasks (default: `claude-haiku-4-5-20251001`)
 - `DAILY_REQUEST_LIMIT` — AI requests per day (default: 100)
 - Default DB is `sqlite+aiosqlite:///./newgen_realty.db`; docker-compose overrides to PostgreSQL (`asyncpg`).
