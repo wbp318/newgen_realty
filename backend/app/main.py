@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
@@ -33,6 +33,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Set baseline security headers on every response and override the
+    default Server header so we don't advertise uvicorn to attackers.
+    These are pentest production-checklist items.
+    """
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # HSTS only takes effect over HTTPS but is harmless under HTTP.
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Replace Starlette/uvicorn's default Server header — leaving "uvicorn"
+    # on it tells attackers exactly what we're running.
+    if "server" in response.headers:
+        del response.headers["server"]
+    response.headers["Server"] = "newgen-realty"
+    return response
 
 app.include_router(properties.router)
 app.include_router(contacts.router)

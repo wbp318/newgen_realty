@@ -77,7 +77,7 @@ timeout /t 2 /nobreak >nul
 echo.
 echo Starting backend on http://localhost:8000 ...
 cd /d "%~dp0backend"
-start "NewGen Backend" cmd /k "call venv\Scripts\activate && uvicorn app.main:app --reload --port 8000"
+start "NewGen Backend" cmd /k "call venv\Scripts\activate && uvicorn app.main:app --reload --port 8000 --no-server-header"
 
 :: Give backend a moment to boot
 timeout /t 3 /nobreak >nul
