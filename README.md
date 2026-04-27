@@ -19,6 +19,31 @@ AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives 
 | Compliance checking | Manual / hope | $0 | TCPA baked into every outreach action |
 | **Total** | | **$400+/month** | **One platform** |
 
+## What works without paid keys
+
+You can run the full platform with only an `ANTHROPIC_API_KEY` — every other key is optional and unlocks specific features.
+
+**Free-tier features (work today, no extra setup):**
+- Manual prospect entry with auto-geocoding (Nominatim, falls back through street → city → ZIP)
+- AI prospect scoring, outreach generation, dashboard insights
+- Pipeline tracking, campaign management, drip sequence builder
+- Farm Map with prospects + properties layered, parish/county boundaries
+- TCPA compliance gating and opt-out processing
+- County / parish portal directory at `/portals` for free manual lookups
+- Live integration status panel on the dashboard tells you exactly what's configured
+
+**Locked behind keys (each can be added independently):**
+
+| Integration | Tier | What it unlocks |
+|---|---|---|
+| ATTOM Data | paid (~$95/mo) | Bulk public-record search — the discovery backbone. Without it, you add prospects manually. |
+| Realty Mole | free tier exists | Real comparable sales feeding AI comp analysis and pricing |
+| Skip Tracing | paid (~$0.15/record) | Find phone/email for prospects with no contact info |
+| Resend | free tier exists (3K/mo) | Drip campaigns actually send email |
+| Twilio | paid (~$1/mo + per-msg) | Drip campaigns actually send SMS, STOP-keyword auto-handling |
+
+The dashboard's **Data Sources** panel surfaces all of this live — you can see what's working and what each missing key would add.
+
 ## Documentation
 
 | File | Contents |
@@ -215,7 +240,7 @@ The core differentiator. Find motivated sellers from public records, score them 
   - **Tax Delinquent** — Overdue property taxes (financial pressure signal)
   - **Long-Term Owners** — 10+ years ownership (sitting on equity, may not know market value)
   - **Vacant Properties** — Unoccupied (carrying costs with no benefit)
-- **County Portal Data** — Free supplementary data from LA parish assessor portals, ARCountyData.com, and MS chancery clerk sites
+- **County / Parish Portal Directory** — Free, curated link directory of LA parish assessors, AR county portals (incl. ARCountyData umbrella), and MS chancery clerk / tax assessor pages. Linked from the dashboard at `/portals` so an agent without an ATTOM subscription can do free manual lookups
 - **Auto-Deduplication** — Imported prospects are checked against existing records to prevent duplicates
 - **Property Enrichment** — Pull detailed property data + AVM (Automated Valuation Model) estimates from ATTOM
 - **Skip Tracing** — Find phone numbers, email addresses, and mailing addresses for prospects with no contact info. Pluggable providers (free stub included, BatchSkipTracing.com integration ready)
