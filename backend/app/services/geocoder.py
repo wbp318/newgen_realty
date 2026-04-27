@@ -80,14 +80,18 @@ def geocode(
     postal_code: Optional[str] = None,
 ) -> Optional[dict]:
     """Return {"latitude": float, "longitude": float, "display_name": str,
-    "precision": "street" | "locality" | "postal"} or None.
+    "precision": "street" | "locality"} or None.
 
     Tries progressively less specific queries so rural addresses where
     Nominatim has no street-level data still get a town-center marker:
         1. street + city + state + postal
         2. city + state + postal
         3. city + state
-        4. postal + state (last resort, often whole zip area)
+
+    We deliberately don't fall back to postal-only — Nominatim returns
+    false-positive matches for invalid ZIPs (e.g. "00000, ZZ" returns a
+    point in Wisconsin), and ZIP areas are too coarse to be useful when
+    we have nothing else.
     """
     if not is_configured():
         return None
@@ -104,8 +108,6 @@ def geocode(
         locality_no_zip = ", ".join(p for p in (city, state) if p)
         if locality_no_zip and locality_no_zip != locality:
             attempts.append(("locality", locality_no_zip))
-    if postal_code and state:
-        attempts.append(("postal", f"{postal_code}, {state}"))
 
     for precision, query in attempts:
         result = _query_nominatim(query)

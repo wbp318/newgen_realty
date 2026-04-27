@@ -90,7 +90,14 @@ def test_delete_prospect_removes_it(api, make_prospect):
 
 def test_geo_endpoint_excludes_prospects_without_coordinates(api, make_prospect):
     # A prospect created without lat/lng must NOT appear in the geo feed.
-    prospect = make_prospect()
+    # Use an address Nominatim can't resolve at any fallback level
+    # (the geocoder cascades street → city+state+zip → city+state → zip+state).
+    prospect = make_prospect(
+        property_address="nonexistent",
+        property_city="zzzznonexistentcityzzzz",
+        property_state="ZZ",
+        property_zip="00000",
+    )
     r = api.get("/api/prospects/geo?limit=200")
     assert r.status_code == 200
     ids = {p["id"] for p in r.json()}
