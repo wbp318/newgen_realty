@@ -33,6 +33,7 @@ from app.services.listing_generator import generate_listing
 from app.services.property_matcher import match_properties
 from app.services.prospect_scorer import score_prospect
 from app.services import market_data
+from app.services.rate_limit import rate_limit
 from app.prompts.system_prompts import DASHBOARD_INSIGHTS_SYSTEM
 from app.prompts.templates import DASHBOARD_INSIGHTS_TEMPLATE
 from app.config import settings
@@ -40,7 +41,11 @@ from app.config import settings
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 
-@router.post("/chat", response_model=ChatResponse)
+# 20 chats per minute per IP — pentest target
+_chat_rate_limit = rate_limit("ai.chat", limit=20, window_seconds=60)
+
+
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(_chat_rate_limit)])
 async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     messages = [{"role": m.role, "content": m.content} for m in request.messages]
     response = assistant.chat(messages, model=settings.AI_MODEL_FAST)

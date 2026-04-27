@@ -25,10 +25,14 @@ from app.schemas.outreach import (
 )
 from app.services.outreach_generator import generate_outreach_message, generate_campaign_insights
 from app.services.prospect_enrichment import validate_outreach_compliance
+from app.services.rate_limit import rate_limit
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/outreach", tags=["outreach"])
+
+# 20 AI message generations per minute per IP — pentest target
+_generate_rate_limit = rate_limit("outreach.generate_message", limit=20, window_seconds=60)
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +125,7 @@ async def list_campaign_messages(
 # Generate Messages
 # ---------------------------------------------------------------------------
 
-@router.post("/generate-message", response_model=GenerateMessageResponse)
+@router.post("/generate-message", response_model=GenerateMessageResponse, dependencies=[Depends(_generate_rate_limit)])
 async def gen_message(request: GenerateMessageRequest, db: AsyncSession = Depends(get_db)):
     """Generate an AI-personalized outreach message for a prospect."""
     # Fetch prospect

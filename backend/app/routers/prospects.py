@@ -29,6 +29,13 @@ from app.services import skip_trace as skip_trace_service
 from app.services import county_data
 from app.services import geocoder
 from app.services.compliance import validate_outreach_compliance
+from app.services.rate_limit import rate_limit
+
+
+# Hourly cap on ATTOM search (expensive paid endpoint).
+_search_rate_limit = rate_limit("prospects.search", limit=10, window_seconds=3600)
+# Per-minute cap on single-prospect skip trace.
+_skip_trace_rate_limit = rate_limit("prospects.skip_trace", limit=5, window_seconds=60)
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +137,7 @@ async def update_prospect_list(
 # Search — import from ATTOM
 # ---------------------------------------------------------------------------
 
-@router.post("/search", response_model=ProspectSearchResponse)
+@router.post("/search", response_model=ProspectSearchResponse, dependencies=[Depends(_search_rate_limit)])
 async def search_prospects(
     request: ProspectSearchRequest,
     db: AsyncSession = Depends(get_db),
@@ -610,7 +617,7 @@ async def convert_to_contact(prospect_id: str, db: AsyncSession = Depends(get_db
 # Skip Trace — find contact info for a prospect
 # ---------------------------------------------------------------------------
 
-@router.post("/{prospect_id}/skip-trace")
+@router.post("/{prospect_id}/skip-trace", dependencies=[Depends(_skip_trace_rate_limit)])
 async def skip_trace_prospect(prospect_id: str, db: AsyncSession = Depends(get_db)):
     """Run skip tracing to find phone/email for a prospect."""
     result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))

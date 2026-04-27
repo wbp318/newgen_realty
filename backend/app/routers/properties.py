@@ -15,6 +15,11 @@ from app.schemas.property import (
     PropertyUpdate,
 )
 from app.services import geocoder
+from app.services.rate_limit import rate_limit
+
+
+# 100 GET /api/properties per minute per IP — pentest target
+_general_rate_limit = rate_limit("properties.list", limit=100, window_seconds=60)
 
 
 def _apply_geocode(prop: Property) -> None:
@@ -34,7 +39,7 @@ def _apply_geocode(prop: Property) -> None:
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
 
-@router.get("", response_model=list[PropertyResponse])
+@router.get("", response_model=list[PropertyResponse], dependencies=[Depends(_general_rate_limit)])
 async def list_properties(
     parish: Optional[str] = Query(None, max_length=100),
     state: Optional[str] = Query(None, max_length=2),
