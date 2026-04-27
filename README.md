@@ -14,7 +14,7 @@ AI-powered real estate platform for Louisiana, Arkansas, and Mississippi. Gives 
 | Write outreach | ChatGPT (copy-paste) | $20 | AI-personalized per prospect type + situation |
 | Track campaigns | Mailchimp / spreadsheet | $0-50 | Campaign management with message tracking |
 | Scheduled drip sending | ActiveCampaign / Lemlist | $49-99 | Multi-step drip scheduler with Resend + Twilio, TCPA-gated |
-| Geographic prospecting | Mapright / Landglide | $25-50 | Farm map with heat layer, color-coded score markers |
+| Geographic prospecting | Mapright / Landglide | $25-50 | Farm map with heat layer, prospects + properties on the same map, click-to-scope by parish/county |
 | Market analysis | MLS + manual | $0 | AI + Realty Mole real market data |
 | Compliance checking | Manual / hope | $0 | TCPA baked into every outreach action |
 | **Total** | | **$400+/month** | **One platform** |
@@ -192,14 +192,14 @@ The platform uses a split model approach to balance quality and cost:
 |---------|-------|-----|
 | Chat | **Haiku 4.5** ($0.80/$4 per M tokens) | Conversational, high volume, fast responses |
 | Dashboard Insights | **Haiku 4.5** | Summary/analysis, good enough quality |
-| Listing Generation | **Sonnet 4** ($3/$15 per M tokens) | Copywriting quality matters for MLS |
-| Comp Analysis | **Sonnet 4** | Pricing accuracy is critical |
-| Lead Scoring | **Sonnet 4** | Nuanced evaluation of buyer readiness |
-| Property Matching | **Sonnet 4** | Nuanced preference-to-inventory matching |
-| Communication Drafting | **Sonnet 4** | Client-facing writing quality |
-| Prospect Scoring | **Sonnet 4** | Motivation signal analysis needs depth |
-| Outreach Generation | **Sonnet 4** | Tone/empathy adaptation is the key differentiator |
-| Campaign Insights | **Sonnet 4** | Strategic optimization recommendations |
+| Listing Generation | **Sonnet 4.6** ($3/$15 per M tokens) | Copywriting quality matters for MLS |
+| Comp Analysis | **Sonnet 4.6** | Pricing accuracy is critical |
+| Lead Scoring | **Sonnet 4.6** | Nuanced evaluation of buyer readiness |
+| Property Matching | **Sonnet 4.6** | Nuanced preference-to-inventory matching |
+| Communication Drafting | **Sonnet 4.6** | Client-facing writing quality |
+| Prospect Scoring | **Sonnet 4.6** | Motivation signal analysis needs depth |
+| Outreach Generation | **Sonnet 4.6** | Tone/empathy adaptation is the key differentiator |
+| Campaign Insights | **Sonnet 4.6** | Strategic optimization recommendations |
 
 Configurable via `AI_MODEL` (Sonnet, default) and `AI_MODEL_FAST` (Haiku, default) in `.env`.
 
@@ -277,13 +277,19 @@ Organize and *actually send* outreach at scale:
 
 ### Farm Map (Geographic Intelligence)
 
-Leaflet + OpenStreetMap view of your entire prospect pipeline:
-- **Auto-geocoding** — New prospects from ATTOM or manual entry are geocoded via Nominatim (free) on creation
-- **Heat layer** — Motivation density at a glance; darker = more prospects / higher scores
-- **Color-coded markers** — Red (score ≥80), amber (60-79), yellow (40-59), blue (<40 or unscored)
-- **Filters** — Min score, state, prospect type (multi-select), status
-- **Backfill button** — Geocode historical prospects in batches of 50 (~1 min each due to Nominatim rate limits)
-- **Auto-fit bounds** — Map centers/zooms to your actual prospect footprint on load
+Leaflet + OpenStreetMap view of your prospects **and** properties on the same map. Real-estate agents work a "farm" — a geographic area they prospect repeatedly. The map layers cold leads against your active inventory so you can see them in spatial context.
+
+- **Two layers, two shapes** — Prospects render as **circles** (color-coded by AI score: red ≥80, amber 60-79, yellow 40-59, blue <40). Properties render as **squares** (color-coded by status: emerald active, blue pending, purple sold, gray other).
+- **Auto-geocoding** — New prospects (manual or ATTOM-imported) and new/edited properties geocode via Nominatim (free, no key) on save. The geocoder falls back progressively when full street data is missing in OSM (`street → city+state+zip → city+state → zip+state`), so rural addresses still pin at the town centroid instead of failing silently.
+- **Heat layer** — Prospect motivation density (properties aren't included in the heat).
+- **Click a parish or county** to scope both layers to that jurisdiction; click again to clear.
+- **Cursor-anchored zoom** — +/− buttons and the keyboard zoom toward your cursor (like Google Maps / ArcGIS), not the map center. Wheel zoom was already cursor-anchored by Leaflet default.
+- **Drag-to-resize** — Pull the bottom-right corner to make the map larger or smaller. Live dimension readout below the frame.
+- **Basemap toggle** — OSM street tiles or Esri World Imagery satellite. Both free, no API keys.
+- **Parish/county boundary overlay** — LA/AR/MS only, served as a static GeoJSON (Census TIGER, FIPS-filtered).
+- **Backfill button** — Geocodes up to 50 prospects + 50 properties without coordinates in one click (~1-2 min total due to Nominatim rate limits).
+- **Auto-fit bounds** — On first load, the map zooms to fit your loaded points.
+- **Filters** — Min score, state, prospect type (multi-select), layer toggles. Score and prospect-type filters apply to prospects only.
 
 ### TCPA Compliance (Built In, Not Bolted On)
 
@@ -337,7 +343,7 @@ The platform dynamically labels "Parish" for LA and "County" for AR/MS throughou
 |-------|------|
 | Backend | FastAPI, SQLAlchemy 2.0 (async), Python 3.12+ |
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS v4 |
-| AI | Anthropic Claude API (Sonnet 4 + Haiku 4.5) with usage tracking, rate limiting, and cost estimation |
+| AI | Anthropic Claude API (Sonnet 4.6 + Haiku 4.5) with usage tracking, rate limiting, and cost estimation |
 | Prospecting | ATTOM Data API (property records, owner data, AVM, foreclosure) |
 | Market Data | Realty Mole Property API via RapidAPI (comparable sales) |
 | Skip Tracing | Pluggable providers (BatchSkipTracing.com integration ready) |
@@ -628,7 +634,7 @@ frontend/
 |----------|----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | **Yes** | — | Your Anthropic API key |
 | `DATABASE_URL` | No | `sqlite+aiosqlite:///./newgen_realty.db` | Database connection string |
-| `AI_MODEL` | No | `claude-sonnet-4-20250514` | Claude model for quality tasks (scoring, outreach, listings) |
+| `AI_MODEL` | No | `claude-sonnet-4-6` | Claude model for quality tasks (scoring, outreach, listings) |
 | `AI_MODEL_FAST` | No | `claude-haiku-4-5-20251001` | Claude model for speed tasks (chat, dashboard insights) |
 | `DAILY_REQUEST_LIMIT` | No | `100` | Daily AI request limit |
 | `REALTY_MOLE_API_KEY` | No | — | Market comps API ([RapidAPI](https://rapidapi.com/realtymole/api/realty-mole-property-api)) |

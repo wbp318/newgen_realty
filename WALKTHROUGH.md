@@ -27,6 +27,7 @@ A complete step-by-step guide to using every feature of the platform. Follow thi
 19. [Convert Prospect to Contact](#19-convert-prospect-to-contact)
 20. [Dashboard Insights](#20-dashboard-insights)
 21. [What Makes This a Gap-Filler](#21-what-makes-this-a-gap-filler)
+22. [Farm Map — Geographic View of Prospects + Properties](#22-farm-map--geographic-view-of-prospects--properties)
 
 ---
 
@@ -558,6 +559,41 @@ Every step feeds data to the next. The AI gets smarter about your market as you 
 
 ---
 
+## 22. Farm Map — Geographic View of Prospects + Properties
+
+A "farm" in real estate is the area you work repeatedly: where you mail, knock, build name recognition. The Farm Map at `/map` lets you see prospects (cold leads from public records) layered on top of properties (your inventory) so you can spot opportunity in spatial context — e.g. "I just sold three houses in Bossier Parish; here are 20 hot prospects clustered there."
+
+### What's on the map
+- **Circles = prospects**, colored by AI score (red ≥80, amber 60-79, yellow 40-59, blue <40)
+- **Squares = properties**, colored by status (emerald active, blue pending, purple sold, gray draft/withdrawn)
+- **Heat overlay** — prospect motivation density (denser = more high-scoring prospects)
+- **Parish/county overlay** — boundary lines for LA, AR, MS
+
+### Filters and controls
+- **Min score** — only show prospects scoring above N (defaults 0)
+- **State** — Louisiana, Arkansas, or Mississippi (or all)
+- **Prospect types** — pick any combination of absentee owner, pre-foreclosure, probate, long-term owner, expired listing, FSBO, vacant, tax delinquent
+- **Layers** — toggle Heat / Prospects / Properties / Parish-county lines independently
+- **Basemap** — Street (OSM) or Satellite (Esri World Imagery), both free
+- **Click a parish/county** on the map → scopes both prospects and properties to that jurisdiction. Click again or click the × chip to clear.
+
+### Interaction
+- **Cursor-anchored zoom** — wheel scroll, +/− buttons, and keyboard +/− all zoom toward your cursor (like Google Maps / ArcGIS), not the map center
+- **Drag the bottom-right corner** to resize the map. Live `width × height` readout under the frame.
+- **Marker popup** — clicking any prospect or property opens a popup with address, type, status, score/asking price, and a link to the detail page.
+
+### Geocoding
+Every prospect and property is geocoded automatically via OpenStreetMap Nominatim (free, no key) when you create or edit it. The geocoder falls back progressively when a full street address can't be resolved (`street → city+state+zip → city+state → zip+state`), so rural addresses where OSM has no street-level data still pin at the town centroid instead of failing silently.
+
+If you have rows that predate the create-time geocoder (or just got created while Nominatim was down), click **Geocode missing** at the top right. It scans up to 50 prospects + 50 properties without coordinates and fills them in (~1-2 minutes due to the 1 req/sec rate limit).
+
+### Tips
+- Set min score to **80** to see only your hottest prospects.
+- Use the parish/county click to focus a single market area before pitching.
+- Toggle the satellite basemap when you want to look at terrain or proximity to major roads/water.
+
+---
+
 ## API Quick Reference
 
 If you want to test via the API directly:
@@ -591,6 +627,10 @@ curl http://localhost:8000/api/outreach/campaigns
 
 # Available county data sources
 curl http://localhost:8000/api/prospects/county-sources
+
+# Farm Map data (lightweight geo points)
+curl 'http://localhost:8000/api/prospects/geo?min_score=80&state=LA'
+curl 'http://localhost:8000/api/properties/geo?status=active'
 ```
 
 ---

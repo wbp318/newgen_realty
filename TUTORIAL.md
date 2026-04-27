@@ -388,7 +388,8 @@ POST /api/outreach/campaigns/{id}/insights   — AI campaign analytics
 | `DATABASE_URL` | No | `sqlite+aiosqlite:///./newgen_realty.db` | Database |
 | `REALTY_MOLE_API_KEY` | No | — | Market comps (RapidAPI) |
 | `ATTOM_API_KEY` | No | — | Prospecting engine (attomdata.com) |
-| `AI_MODEL` | No | `claude-sonnet-4-20250514` | Claude model |
+| `AI_MODEL` | No | `claude-sonnet-4-6` | Claude model for quality tasks (scoring, outreach, listings) |
+| `AI_MODEL_FAST` | No | `claude-haiku-4-5-20251001` | Claude model for high-volume tasks (chat, dashboard insights) |
 | `DAILY_REQUEST_LIMIT` | No | `100` | Max AI requests/day |
 
 ---

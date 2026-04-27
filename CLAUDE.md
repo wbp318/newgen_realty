@@ -113,13 +113,13 @@ Backfill + geo endpoints exist for both entities:
 - The frontend's "Geocode missing" button calls `runGeocodeBackfill()` which hits both endpoints in parallel and merges the stats.
 
 Frontend `/map` dynamically imports `components/map/ProspectMap.tsx` client-side (must be `ssr: false` because `leaflet` and `leaflet.heat` reference `window` at import time). The map renders **two layers** simultaneously:
-- **Prospects** as `CircleMarker`s, colored by AI score (oxblood ≥80, gold 60-79, ochre 40-59, slate-blue <40)
-- **Properties** as square markers via Leaflet `divIcon`, colored by status (survey-green active, slate-blue pending, purple sold, sepia other)
+- **Prospects** as `CircleMarker`s, colored by AI score (red ≥80, amber 60-79, yellow 40-59, blue <40)
+- **Properties** as square markers via Leaflet `divIcon`, colored by status (emerald active, blue pending, purple sold, gray other)
 
 Other features: basemap toggle (OSM street or Esri World Imagery satellite — both free, no API keys), heat overlay (prospects only), parish/county boundary overlay fetched from the static asset `frontend/public/parishes-la-ar-ms.geojson` (LA/AR/MS only, from Census TIGER FIPS-filtered data). Clicking a parish filters both layers to that parish via the `parish` query param. Auto-fits bounds to the loaded points on first render.
 
 Three small helper components live in `ProspectMap.tsx` and matter for stability:
-- `ResizeWatcher` — `ResizeObserver` on the map container that calls `map.invalidateSize()` when the parent resizes. Required because the map container is user-resizable (CSS `resize: both` on the parchment frame).
+- `ResizeWatcher` — `ResizeObserver` on the map container that calls `map.invalidateSize()` when the parent resizes. Required because the map container is user-resizable (CSS `resize: both` on the panel frame).
 - `CursorAnchoredZoom` — patches `map.zoomIn`/`map.zoomOut` so the +/- buttons and keyboard zoom toward the cursor (like Google Maps / ArcGIS) instead of the center. Wheel zoom is already cursor-anchored by Leaflet default.
 - `HeatLayer` — defers `addTo(map)` via `requestAnimationFrame` until `map.getSize()` reports non-zero. The heat plugin's canvas would otherwise crash with "source height is 0" if mounted into a still-resizing flex parent.
 
@@ -155,24 +155,22 @@ Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/a
 
 Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot leads), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail with drip sequence builder + messages table), `/map` (Farm Map — both prospects and properties layered geographically).
 
-#### Cartographer design system
+#### Design system
 
-`app/globals.css` defines a custom design system named after the "Office of the Cartographer." Don't use vanilla Tailwind colors (`bg-white`, `text-gray-500`, `border-gray-200`) on user-facing pages — they will look out of place against the parchment background. Use the design system primitives instead:
+`app/globals.css` defines a small, focused dark UI system. The single design move is a serif headline (DM Serif Display) against a calm dark slate UI; everything else is intentionally restrained. Don't use vanilla Tailwind colors (`bg-white`, `text-gray-500`, `border-gray-200`) on user-facing pages — they fight the dark surface. Use the system primitives instead:
 
-- **Palette CSS variables** (set in `:root`, exposed to Tailwind via `@theme inline`): `--parchment` / `--parchment-deep` / `--parchment-edge` (page + panel surfaces), `--ink` / `--ink-soft` / `--ink-faded` (text hierarchy), `--oxblood` / `--oxblood-deep` (primary accent + hot prospect color), `--survey-green` (active properties), `--gold` / `--slate-blue` / `--kraft` (secondary tones).
-- **Typography** loaded via `next/font` in `layout.tsx`: `--font-display` (DM Serif Display, headlines), `--font-body` (Newsreader, default), `--font-mono` (JetBrains Mono, eyebrows / coordinates / tags). Use `font-display` / `font-body` / `font-mono` utility classes.
-- **Component utilities**:
-  - `.panel` + `.panel-shadow` — parchment surfaces with hairline edges
-  - `.corner-ornaments` (with `<span class="corner-tr">` / `<span class="corner-bl">` children) — decorative L-shaped corner brackets
-  - `.btn-ink` / `.btn-ghost` — primary and ghost buttons in monospace small caps
-  - `.field` — input/select with parchment background and ink focus
-  - `.tag` — small uppercase pill chips
-  - `.stamp` (oxblood) / `.stamp-ink` (ink-soft) — eyebrow-text stamps
-  - `.rule-fleuron` — decorative hairline rule with a fleuron in the middle
-  - `.paper-grain` / `.paper-grain-soft` / `.topo-bg` — subtle SVG/data-URI textures
-- **Leaflet popups** are restyled in `globals.css` to match the parchment palette.
+- **Palette CSS variables** (set in `:root`, exposed to Tailwind via `@theme inline`): `--bg` (page) / `--bg-elevated` (cards) / `--bg-sidebar` / `--bg-input`; `--border` / `--border-soft`; `--text` / `--text-soft` / `--text-faded`; `--accent` (emerald-500) / `--accent-soft` / `--accent-deep`; `--hot` / `--warm` / `--cool` / `--info` / `--purple` for status hues.
+- **Typography** loaded via `next/font` in `layout.tsx`: `--font-display` (DM Serif Display, used for page titles and panel headers — `font-display` class), `--font-sans` (Inter, default body), `--font-mono` (JetBrains Mono, used sparingly for timestamps).
+- **Component utilities** — only what's needed:
+  - `.panel` + `.panel-hover` — elevated dark surface with hairline border
+  - `.btn-primary` (emerald) / `.btn-ghost` (subtle border) — buttons
+  - `.field` — input/select with dark fill and accent-colored focus
+  - `.tag` — small pill chip
+  - `.link` — accent-colored link with underline-on-hover
+  - `.hairline` — 1px divider in `--border`
+- **Leaflet popups + scrollbars** are restyled in `globals.css` to match the dark palette.
 
-The atlas-spine sidebar (`components/layout/Sidebar.tsx`) is sticky (`position: sticky; top: 0`) and uses a TOC-style nav with leader dots and Roman folio numbers. Pages should be wrapped in `<div className="max-w-[1400px] mx-auto">` for consistent measure.
+The sidebar (`components/layout/Sidebar.tsx`) is sticky (`position: sticky; top: 0`) with a simple serif wordmark and calm nav rows; active route gets a 2px emerald left border + faint emerald tint. Pages should be wrapped in `<div className="max-w-[1400px] mx-auto">` for consistent measure.
 
 #### Parish/County labeling
 
