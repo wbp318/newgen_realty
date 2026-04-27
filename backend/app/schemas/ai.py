@@ -1,16 +1,18 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.schemas._validators import BoundedJSONDict
 
 
 class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
-    content: str
+    role: str = Field(..., max_length=20)  # "user" or "assistant"
+    content: str = Field(..., max_length=20000)
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage]
-    conversation_id: Optional[str] = None
+    messages: list[ChatMessage] = Field(..., max_length=100)
+    conversation_id: Optional[str] = Field(None, max_length=36)
 
 
 class ChatResponse(BaseModel):
@@ -19,20 +21,20 @@ class ChatResponse(BaseModel):
 
 
 class ListingRequest(BaseModel):
-    street_address: str
-    city: str
-    parish: str
-    state: str = "LA"
-    property_type: str
+    street_address: str = Field(..., max_length=500)
+    city: str = Field(..., max_length=100)
+    parish: str = Field(..., max_length=100)
+    state: str = Field("LA", max_length=2)
+    property_type: str = Field(..., max_length=20)
     bedrooms: Optional[int] = None
     bathrooms: Optional[float] = None
     sqft: Optional[int] = None
     lot_size_acres: Optional[float] = None
     year_built: Optional[int] = None
     asking_price: Optional[int] = None
-    features: Optional[dict] = None
-    notes: Optional[str] = None
-    tone: str = "professional"  # professional, luxury, casual, investor
+    features: Optional[BoundedJSONDict] = None
+    notes: Optional[str] = Field(None, max_length=5000)
+    tone: str = Field("professional", max_length=20)  # professional, luxury, casual, investor
 
 
 class ListingResponse(BaseModel):
@@ -41,24 +43,24 @@ class ListingResponse(BaseModel):
 
 
 class CompData(BaseModel):
-    address: str
+    address: str = Field(..., max_length=500)
     sale_price: int
     sqft: Optional[int] = None
     bedrooms: Optional[int] = None
     bathrooms: Optional[float] = None
-    sale_date: Optional[str] = None
-    notes: Optional[str] = None
+    sale_date: Optional[str] = Field(None, max_length=20)
+    notes: Optional[str] = Field(None, max_length=2000)
 
 
 class CompAnalysisRequest(BaseModel):
-    subject_address: str
+    subject_address: str = Field(..., max_length=500)
     subject_sqft: Optional[int] = None
     subject_bedrooms: Optional[int] = None
     subject_bathrooms: Optional[float] = None
     subject_lot_acres: Optional[float] = None
     subject_year_built: Optional[int] = None
-    subject_features: Optional[dict] = None
-    comps: list[CompData]
+    subject_features: Optional[BoundedJSONDict] = None
+    comps: list[CompData] = Field(..., max_length=50)
 
 
 class CompAnalysisResponse(BaseModel):
@@ -69,11 +71,11 @@ class CompAnalysisResponse(BaseModel):
 
 
 class CommDraftRequest(BaseModel):
-    recipient_name: str
-    purpose: str  # "initial_outreach", "follow_up", "price_reduction", "offer_received", "closing_update"
-    context: Optional[str] = None
-    tone: str = "professional"  # professional, friendly, urgent
-    medium: str = "email"  # email, text
+    recipient_name: str = Field(..., max_length=200)
+    purpose: str = Field(..., max_length=50)  # initial_outreach, follow_up, etc.
+    context: Optional[str] = Field(None, max_length=10000)
+    tone: str = Field("professional", max_length=20)
+    medium: str = Field("email", max_length=20)
 
 
 class CommDraftResponse(BaseModel):

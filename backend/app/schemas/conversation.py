@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ConversationCreate(BaseModel):
-    title: Optional[str] = None
-    context_type: str = "general"
-    context_id: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=200)
+    context_type: str = Field("general", max_length=50)
+    context_id: Optional[str] = Field(None, max_length=36)
 
 
 class ConversationResponse(BaseModel):

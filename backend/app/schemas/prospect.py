@@ -3,47 +3,49 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas._validators import BoundedJSONDict
+
 
 class ProspectCreate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    mailing_address: Optional[str] = None
-    property_address: str
-    property_city: Optional[str] = None
-    property_parish: Optional[str] = None
-    property_state: str = "LA"
-    property_zip: Optional[str] = None
-    prospect_type: str
-    status: str = "new"
-    motivation_signals: Optional[dict] = None
-    property_data: Optional[dict] = None
-    data_source: str = "manual"
-    source_record_id: Optional[str] = None
-    notes: Optional[str] = None
-    tags: Optional[list[str]] = None
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    email: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=30)
+    mailing_address: Optional[str] = Field(None, max_length=500)
+    property_address: str = Field(..., max_length=500)
+    property_city: Optional[str] = Field(None, max_length=100)
+    property_parish: Optional[str] = Field(None, max_length=100)
+    property_state: str = Field("LA", max_length=2)
+    property_zip: Optional[str] = Field(None, max_length=10)
+    prospect_type: str = Field(..., max_length=30)
+    status: str = Field("new", max_length=20)
+    motivation_signals: Optional[BoundedJSONDict] = None
+    property_data: Optional[BoundedJSONDict] = None
+    data_source: str = Field("manual", max_length=50)
+    source_record_id: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = Field(None, max_length=10000)
+    tags: Optional[list[str]] = Field(None, max_length=20)
 
 
 class ProspectUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    mailing_address: Optional[str] = None
-    property_address: Optional[str] = None
-    property_city: Optional[str] = None
-    property_parish: Optional[str] = None
-    property_state: Optional[str] = None
-    property_zip: Optional[str] = None
-    prospect_type: Optional[str] = None
-    status: Optional[str] = None
-    motivation_signals: Optional[dict] = None
-    property_data: Optional[dict] = None
-    consent_status: Optional[str] = None
-    consent_method: Optional[str] = None
-    notes: Optional[str] = None
-    tags: Optional[list[str]] = None
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    email: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=30)
+    mailing_address: Optional[str] = Field(None, max_length=500)
+    property_address: Optional[str] = Field(None, max_length=500)
+    property_city: Optional[str] = Field(None, max_length=100)
+    property_parish: Optional[str] = Field(None, max_length=100)
+    property_state: Optional[str] = Field(None, max_length=2)
+    property_zip: Optional[str] = Field(None, max_length=10)
+    prospect_type: Optional[str] = Field(None, max_length=30)
+    status: Optional[str] = Field(None, max_length=20)
+    motivation_signals: Optional[BoundedJSONDict] = None
+    property_data: Optional[BoundedJSONDict] = None
+    consent_status: Optional[str] = Field(None, max_length=20)
+    consent_method: Optional[str] = Field(None, max_length=50)
+    notes: Optional[str] = Field(None, max_length=10000)
+    tags: Optional[list[str]] = Field(None, max_length=20)
 
 
 class ProspectResponse(BaseModel):
@@ -103,14 +105,14 @@ class ProspectGeoPoint(BaseModel):
 
 
 class ProspectSearchRequest(BaseModel):
-    search_type: str
-    state: str = "LA"
-    parish: Optional[str] = None
-    city: Optional[str] = None
-    zip_code: Optional[str] = None
-    min_equity_pct: Optional[int] = None
-    min_ownership_years: Optional[int] = None
-    max_results: int = 50
+    search_type: str = Field(..., max_length=30)
+    state: str = Field("LA", max_length=2)
+    parish: Optional[str] = Field(None, max_length=100)
+    city: Optional[str] = Field(None, max_length=100)
+    zip_code: Optional[str] = Field(None, max_length=10)
+    min_equity_pct: Optional[int] = Field(None, ge=0, le=100)
+    min_ownership_years: Optional[int] = Field(None, ge=0, le=200)
+    max_results: int = Field(50, ge=1, le=200)
 
 
 class ProspectSearchResponse(BaseModel):
@@ -123,7 +125,7 @@ class ProspectSearchResponse(BaseModel):
 
 
 class ProspectScoreRequest(BaseModel):
-    prospect_id: str
+    prospect_id: str = Field(..., max_length=36)
 
 
 class ProspectScoreResponse(BaseModel):
@@ -147,16 +149,16 @@ class BulkScoreResponse(BaseModel):
 # Prospect Lists
 
 class ProspectListCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    search_criteria: Optional[dict] = None
-    prospect_ids: Optional[list[str]] = None
+    name: str = Field(..., max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    search_criteria: Optional[BoundedJSONDict] = None
+    prospect_ids: Optional[list[str]] = Field(None, max_length=10000)
 
 
 class ProspectListUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    prospect_ids: Optional[list[str]] = None
+    name: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    prospect_ids: Optional[list[str]] = Field(None, max_length=10000)
 
 
 class ProspectListResponse(BaseModel):

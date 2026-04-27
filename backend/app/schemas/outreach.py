@@ -14,11 +14,11 @@ class SequenceStep(BaseModel):
 class OutreachCampaignCreate(BaseModel):
     name: str = Field(..., max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
-    campaign_type: str = "email"
-    prospect_list_id: Optional[str] = None
+    campaign_type: str = Field("email", max_length=20)
+    prospect_list_id: Optional[str] = Field(None, max_length=36)
     message_template: Optional[str] = Field(None, max_length=5000)
     ai_personalize: bool = True
-    sequence_config: Optional[list[SequenceStep]] = None
+    sequence_config: Optional[list[SequenceStep]] = Field(None, max_length=20)
     send_window_start: Optional[int] = Field(None, ge=0, le=23)
     send_window_end: Optional[int] = Field(None, ge=1, le=24)
     daily_send_cap: Optional[int] = Field(None, ge=1, le=10000)
@@ -27,12 +27,12 @@ class OutreachCampaignCreate(BaseModel):
 class OutreachCampaignUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
-    status: Optional[str] = None
-    campaign_type: Optional[str] = None
-    prospect_list_id: Optional[str] = None
+    status: Optional[str] = Field(None, max_length=20)
+    campaign_type: Optional[str] = Field(None, max_length=20)
+    prospect_list_id: Optional[str] = Field(None, max_length=36)
     message_template: Optional[str] = Field(None, max_length=5000)
     ai_personalize: Optional[bool] = None
-    sequence_config: Optional[list[SequenceStep]] = None
+    sequence_config: Optional[list[SequenceStep]] = Field(None, max_length=20)
     send_window_start: Optional[int] = Field(None, ge=0, le=23)
     send_window_end: Optional[int] = Field(None, ge=1, le=24)
     daily_send_cap: Optional[int] = Field(None, ge=1, le=10000)
@@ -95,10 +95,10 @@ class OutreachMessageResponse(BaseModel):
 
 
 class GenerateMessageRequest(BaseModel):
-    campaign_id: str
-    prospect_id: str
-    medium: str = "email"
-    tone: str = "professional"
+    campaign_id: str = Field(..., max_length=36)
+    prospect_id: str = Field(..., max_length=36)
+    medium: str = Field("email", max_length=20)
+    tone: str = Field("professional", max_length=20)
 
 
 class GenerateMessageResponse(BaseModel):
