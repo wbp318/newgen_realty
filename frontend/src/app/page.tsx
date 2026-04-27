@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getProperties, getContacts, getActivities, getDashboardInsights, getProspects, getOutreachCampaigns } from "@/lib/api";
 import type { Property, Contact, Activity, DashboardInsights, Prospect, OutreachCampaign } from "@/lib/types";
-import LeadScoreBadge from "@/components/ui/LeadScoreBadge";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -48,7 +47,6 @@ export default function Dashboard() {
 
       setRecentActivity(activitiesRes.data);
 
-      // Hot leads = contacts with score >= 60, sorted by score
       const scored = contacts
         .filter((c) => c.ai_lead_score !== null && c.ai_lead_score! >= 60)
         .sort((a, b) => (b.ai_lead_score || 0) - (a.ai_lead_score || 0));
@@ -67,20 +65,17 @@ export default function Dashboard() {
       const prospects: Prospect[] = prospectsRes.data;
       const campaigns: OutreachCampaign[] = campaignsRes.data;
 
-      // Pipeline stats
       const pipeline: Record<string, number> = {};
       for (const p of prospects) {
         pipeline[p.status] = (pipeline[p.status] || 0) + 1;
       }
       setProspectStats(pipeline);
 
-      // Top 5 uncontacted prospects by score
       const uncontacted = prospects
         .filter((p) => p.ai_prospect_score !== null && p.status !== "contacted" && p.status !== "converted" && p.status !== "do_not_contact")
         .sort((a, b) => (b.ai_prospect_score || 0) - (a.ai_prospect_score || 0));
       setTopProspects(uncontacted.slice(0, 5));
 
-      // Active campaigns
       setActiveCampaigns(campaigns.filter((c) => c.status === "active" || c.status === "draft"));
     } catch {
       // Prospects may not be loaded yet
@@ -100,288 +95,429 @@ export default function Dashboard() {
   }
 
   const statCards = [
-    { label: "Total Properties", value: stats.properties, color: "bg-blue-500" },
-    { label: "Active Listings", value: stats.activeListings, color: "bg-emerald-500" },
-    { label: "Total Contacts", value: stats.contacts, color: "bg-purple-500" },
-    { label: "Open Leads", value: stats.leads, color: "bg-amber-500" },
+    { label: "Properties on file",  value: stats.properties,    folio: "01" },
+    { label: "Active listings",     value: stats.activeListings,folio: "02" },
+    { label: "Contacts on roll",    value: stats.contacts,      folio: "03" },
+    { label: "Open leads",          value: stats.leads,         folio: "04" },
   ];
 
-  const activityIcons: Record<string, string> = {
-    call: "📞", email: "📧", text: "💬", showing: "🏠", meeting: "🤝",
-    note: "📝", ai_action: "🤖", status_change: "🔄", offer: "💰",
-  };
+  const formatMoney = (n: number) =>
+    n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${n.toLocaleString()}`;
+
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-      <p className="text-gray-500 mb-8">AI-powered prospecting, CRM, and outreach for LA, AR, and MS</p>
+    <div className="max-w-[1400px] mx-auto">
+      {/* Editorial masthead */}
+      <header className="mb-12">
+        <div className="flex items-end justify-between mb-3">
+          <p className="stamp">Vol. I · Atlas of the Gulf South</p>
+          <p className="stamp-ink">{today}</p>
+        </div>
+        <h1 className="font-display text-7xl leading-[0.95] text-ink mb-4">
+          The Survey Desk
+        </h1>
+        <div className="flex items-end justify-between border-t border-ink/15 pt-3">
+          <p className="text-lg italic" style={{ color: "var(--ink-soft)" }}>
+            A daily account of land, leads, and outreach across Louisiana, Arkansas, and Mississippi.
+          </p>
+          <p className="font-mono text-xs tracking-wider" style={{ color: "var(--ink-faded)" }}>
+            FOLIO 01
+          </p>
+        </div>
+      </header>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      {/* Stats Row — four narrow cards + a wide portfolio ledger */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-10">
         {statCards.map((card) => (
-          <div key={card.label} className="bg-white rounded-xl shadow-sm p-5">
-            <div className={`w-10 h-10 ${card.color} rounded-lg flex items-center justify-center text-white font-bold text-lg mb-3`}>
+          <div key={card.label} className="panel panel-shadow corner-ornaments p-5 lg:col-span-1">
+            <span className="corner-tr" />
+            <span className="corner-bl" />
+            <p className="font-mono text-[0.65rem] tracking-widest uppercase mb-3" style={{ color: "var(--ink-faded)" }}>
+              {card.folio}
+            </p>
+            <p className="font-display text-5xl leading-none text-ink">
               {card.value}
-            </div>
-            <p className="text-gray-600 text-sm">{card.label}</p>
+            </p>
+            <p className="mt-3 text-sm" style={{ color: "var(--ink-soft)" }}>
+              {card.label}
+            </p>
           </div>
         ))}
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="text-2xl font-bold text-emerald-600 mb-3">${stats.portfolioValue.toLocaleString()}</p>
-          <p className="text-gray-600 text-sm">Portfolio Value</p>
+        <div
+          className="panel panel-shadow corner-ornaments p-5 lg:col-span-2 relative overflow-hidden"
+          style={{ background: "var(--ink)", color: "var(--parchment)", borderColor: "var(--ink)" }}
+        >
+          <span className="corner-tr" style={{ borderColor: "var(--parchment-edge)", opacity: 0.4 }} />
+          <span className="corner-bl" style={{ borderColor: "var(--parchment-edge)", opacity: 0.4 }} />
+          <p className="font-mono text-[0.65rem] tracking-widest uppercase mb-3" style={{ color: "var(--kraft)" }}>
+            Ledger · 05
+          </p>
+          <p className="font-display text-5xl leading-none">
+            <span style={{ color: "var(--oxblood)" }}>$</span>
+            {stats.portfolioValue >= 1_000_000
+              ? `${(stats.portfolioValue / 1_000_000).toFixed(2)}M`
+              : stats.portfolioValue.toLocaleString()}
+          </p>
+          <p className="mt-3 text-sm" style={{ color: "var(--kraft)" }}>
+            Portfolio value at asking
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* AI Insights Panel */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-emerald-100">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">AI Insights</h2>
-          <button
-            onClick={handleGetInsights}
-            disabled={loadingInsights}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm"
-          >
-            {loadingInsights ? "Analyzing..." : insights ? "Refresh Insights" : "Generate Insights"}
+      {/* AI Insights */}
+      <section className="panel panel-shadow corner-ornaments p-7 mb-10 relative">
+        <span className="corner-tr" />
+        <span className="corner-bl" />
+        <div className="flex justify-between items-start mb-5">
+          <div>
+            <p className="stamp mb-1">Field Notes</p>
+            <h2 className="font-display text-3xl text-ink">From the Cartographer&apos;s Desk</h2>
+          </div>
+          <button onClick={handleGetInsights} disabled={loadingInsights} className="btn-ink">
+            {loadingInsights ? "Surveying…" : insights ? "Resurvey" : "Compile Notes"}
           </button>
         </div>
         {insights ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Market Observations</h3>
-              <ul className="space-y-1">
-                {insights.insights.map((item, i) => (
-                  <li key={i} className="text-sm text-gray-600 flex gap-2">
-                    <span className="text-emerald-500 flex-shrink-0">&#8226;</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Action Items</h3>
-              <ul className="space-y-1">
-                {insights.actions.map((item, i) => (
-                  <li key={i} className="text-sm text-gray-600 flex gap-2">
-                    <span className="text-amber-500 flex-shrink-0">&#8226;</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Opportunities</h3>
-              <ul className="space-y-1">
-                {insights.opportunities.map((item, i) => (
-                  <li key={i} className="text-sm text-gray-600 flex gap-2">
-                    <span className="text-blue-500 flex-shrink-0">&#8226;</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-2">
+            {[
+              { title: "Observations",    items: insights.insights,      mark: "✣", color: "var(--ink)" },
+              { title: "Action Items",    items: insights.actions,        mark: "❀", color: "var(--oxblood)" },
+              { title: "Opportunities",   items: insights.opportunities, mark: "✤", color: "var(--survey-green)" },
+            ].map((col) => (
+              <div key={col.title}>
+                <p className="font-mono text-[0.65rem] tracking-widest uppercase mb-3" style={{ color: col.color }}>
+                  {col.title}
+                </p>
+                <ul className="space-y-2">
+                  {col.items.map((item, i) => (
+                    <li key={i} className="flex gap-3 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                      <span style={{ color: col.color }} className="flex-shrink-0">{col.mark}</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="text-gray-400 text-sm">Click Generate Insights to get AI-powered analysis of your portfolio.</p>
+          <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
+            Press <span className="font-mono not-italic">Compile Notes</span> for an AI-drawn survey of your portfolio, leads, and outstanding action.
+          </p>
         )}
-      </div>
+      </section>
 
-      {/* Prospect Pipeline */}
+      {/* Prospect Pipeline — stylized as a depth-of-field gauge */}
       {Object.keys(prospectStats).length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-blue-100">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Prospect Pipeline</h2>
-            <Link href="/prospects" className="text-sm text-emerald-600 hover:underline">View all</Link>
+        <section className="panel panel-shadow corner-ornaments p-7 mb-10 relative">
+          <span className="corner-tr" />
+          <span className="corner-bl" />
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <p className="stamp mb-1">Sounding Line</p>
+              <h2 className="font-display text-3xl text-ink">Prospect Pipeline</h2>
+            </div>
+            <Link href="/prospects" className="btn-ghost">View Roll</Link>
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-6 gap-3">
             {[
-              { key: "new", label: "New", color: "bg-blue-500" },
-              { key: "researching", label: "Researching", color: "bg-purple-500" },
-              { key: "qualified", label: "Qualified", color: "bg-amber-500" },
-              { key: "contacted", label: "Contacted", color: "bg-emerald-500" },
-              { key: "responding", label: "Responding", color: "bg-green-500" },
-              { key: "converted", label: "Converted", color: "bg-teal-500" },
+              { key: "new",         label: "New",         color: "var(--slate-blue)" },
+              { key: "researching", label: "Researching", color: "var(--gold)" },
+              { key: "qualified",   label: "Qualified",   color: "var(--oxblood)" },
+              { key: "contacted",   label: "Contacted",   color: "var(--survey-green)" },
+              { key: "responding",  label: "Responding",  color: "var(--survey-green-soft)" },
+              { key: "converted",   label: "Converted",   color: "var(--ink)" },
             ].map((stage) => {
               const count = prospectStats[stage.key] || 0;
               const total = Object.values(prospectStats).reduce((a, b) => a + b, 0);
-              const pct = total > 0 ? ((count / total) * 100) : 0;
+              const pct = total > 0 ? (count / total) * 100 : 0;
               return (
-                <div key={stage.key} className="flex-1 text-center">
-                  <div className="text-lg font-bold text-gray-900">{count}</div>
-                  <div className="text-xs text-gray-500 mb-1">{stage.label}</div>
-                  <div className="bg-gray-100 rounded-full h-2">
-                    <div className={`${stage.color} h-2 rounded-full`} style={{ width: `${Math.max(pct, count > 0 ? 10 : 0)}%` }} />
+                <div key={stage.key} className="flex flex-col items-center text-center">
+                  <p className="font-display text-4xl text-ink leading-none">{count}</p>
+                  <p className="font-mono text-[0.65rem] tracking-widest uppercase mt-2 mb-3" style={{ color: "var(--ink-faded)" }}>
+                    {stage.label}
+                  </p>
+                  <div className="w-full h-1.5 relative" style={{ background: "var(--parchment)" }}>
+                    <div
+                      className="absolute inset-y-0 left-0"
+                      style={{
+                        width: `${Math.max(pct, count > 0 ? 8 : 0)}%`,
+                        background: stage.color,
+                      }}
+                    />
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Three Column: Top Prospects + Active Campaigns + Hot Leads */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Top Prospects */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Top Prospects</h2>
-            <Link href="/prospects/search" className="text-xs text-emerald-600 hover:underline">Search</Link>
-          </div>
+      {/* Three-up: Top Prospects · Campaigns · Hot Leads */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <Panel title="Top Prospects" eyebrow="Plat Book" link={{ href: "/prospects/search", label: "Search" }}>
           {topProspects.length > 0 ? (
-            <div className="space-y-3">
+            <ul className="space-y-3">
               {topProspects.map((p) => {
                 const typeLabels: Record<string, string> = {
                   absentee_owner: "Absentee", pre_foreclosure: "Pre-Foreclosure", probate: "Probate",
                   long_term_owner: "Long-Term", vacant: "Vacant", tax_delinquent: "Tax Delinquent",
                   fsbo: "FSBO", expired_listing: "Expired",
                 };
-                const typeColors: Record<string, string> = {
-                  absentee_owner: "bg-purple-100 text-purple-700", pre_foreclosure: "bg-red-100 text-red-700",
-                  probate: "bg-amber-100 text-amber-700", long_term_owner: "bg-blue-100 text-blue-700",
-                  vacant: "bg-yellow-100 text-yellow-700", tax_delinquent: "bg-orange-100 text-orange-700",
-                  fsbo: "bg-emerald-100 text-emerald-700", expired_listing: "bg-gray-200 text-gray-700",
-                };
                 const score = p.ai_prospect_score || 0;
-                const scoreLabel = score >= 85 ? "Highly Motivated" : score >= 70 ? "Strong" : score >= 50 ? "Moderate" : "Low";
-                const scoreColor = score >= 85 ? "bg-red-100 text-red-700" : score >= 70 ? "bg-orange-100 text-orange-700" : score >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700";
+                const scoreColor =
+                  score >= 80 ? "var(--oxblood)" :
+                  score >= 60 ? "var(--gold)" :
+                  score >= 40 ? "var(--slate-blue)" :
+                  "var(--ink-faded)";
                 return (
-                  <Link key={p.id} href={`/prospects/${p.id}`} className="block hover:bg-gray-50 rounded-lg p-2 -mx-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-medium text-gray-900 text-sm truncate">
-                        {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown"}
-                      </p>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ml-2 ${scoreColor}`}>
-                        {Math.round(score)} {scoreLabel}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${typeColors[p.prospect_type] || "bg-gray-100 text-gray-600"}`}>
-                        {typeLabels[p.prospect_type] || p.prospect_type}
-                      </span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                        p.prospect_type === "pre_foreclosure" ? "bg-red-50 text-red-600" :
-                        p.prospect_type === "probate" ? "bg-amber-50 text-amber-600" :
-                        p.prospect_type === "absentee_owner" ? "bg-purple-50 text-purple-600" :
-                        p.prospect_type === "long_term_owner" ? "bg-blue-50 text-blue-600" :
-                        p.prospect_type === "tax_delinquent" ? "bg-orange-50 text-orange-600" :
-                        p.prospect_type === "vacant" ? "bg-yellow-50 text-yellow-600" :
-                        "bg-gray-50 text-gray-500"
-                      }`}>
-                        {{
-                          absentee_owner: "Business-Focused", pre_foreclosure: "Empathetic", probate: "Sensitive",
-                          long_term_owner: "Congratulatory", tax_delinquent: "Helpful", vacant: "Practical",
-                          fsbo: "Respectful", expired_listing: "Professional",
-                        }[p.prospect_type] || "Standard"}
-                      </span>
-                      <span className="text-xs text-gray-400 truncate">{p.property_city}, {p.property_state}</span>
-                    </div>
-                  </Link>
+                  <li key={p.id}>
+                    <Link href={`/prospects/${p.id}`} className="block group py-2 px-3 -mx-3 transition-colors hover:bg-[var(--parchment)]">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="font-display text-base text-ink truncate">
+                          {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown owner"}
+                        </p>
+                        <span className="font-mono text-sm" style={{ color: scoreColor }}>
+                          {Math.round(score).toString().padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
+                        <span>{typeLabels[p.prospect_type] || p.prospect_type}</span>
+                        <span>·</span>
+                        <span className="truncate">{p.property_city}, {p.property_state}</span>
+                      </div>
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           ) : (
-            <p className="text-gray-400 text-sm">Score prospects to see them here.</p>
-          )}
-        </div>
-
-        {/* Active Campaigns */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Campaigns</h2>
-            <Link href="/outreach" className="text-xs text-emerald-600 hover:underline">View all</Link>
-          </div>
-          {activeCampaigns.length > 0 ? (
-            <div className="space-y-3">
-              {activeCampaigns.map((c) => (
-                <Link key={c.id} href={`/outreach/${c.id}`} className="block hover:bg-gray-50 rounded-lg p-2 -mx-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-medium text-gray-900 text-sm truncate">{c.name}</p>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${c.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"}`}>
-                      {c.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 text-xs text-gray-500">
-                    <span>{c.total_messages} msgs</span>
-                    <span>{c.sent_count} sent</span>
-                    {c.replied_count > 0 && <span className="text-emerald-600">{c.replied_count} replies</span>}
-                  </div>
-                  {c.total_messages > 0 && (
-                    <div className="mt-1 bg-gray-100 rounded-full h-1">
-                      <div className="bg-emerald-500 h-1 rounded-full" style={{ width: `${Math.min((c.sent_count / c.total_messages) * 100, 100)}%` }} />
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">
-              <Link href="/outreach" className="text-emerald-600 hover:underline">Create a campaign</Link> to start outreach.
+            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
+              Score prospects to populate this register.
             </p>
           )}
-        </div>
+        </Panel>
 
-        {/* Hot Leads (moved from two-column) */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Hot Leads</h2>
-          {hotLeads.length > 0 ? (
-            <div className="space-y-3">
-              {hotLeads.map((c) => (
-                <Link key={c.id} href={`/contacts/${c.id}`} className="flex items-center justify-between hover:bg-gray-50 rounded-lg p-2 -mx-2">
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">{c.first_name} {c.last_name}</p>
-                    <p className="text-xs text-gray-500">
-                      {c.preferred_parishes?.slice(0, 2).join(", ") || "No parish pref"}
-                      {c.budget_max ? ` · up to $${c.budget_max.toLocaleString()}` : ""}
-                    </p>
-                  </div>
-                  <LeadScoreBadge score={c.ai_lead_score} size="sm" />
-                </Link>
+        <Panel title="Campaigns" eyebrow="Dispatch" link={{ href: "/outreach", label: "View all" }}>
+          {activeCampaigns.length > 0 ? (
+            <ul className="space-y-3">
+              {activeCampaigns.map((c) => (
+                <li key={c.id}>
+                  <Link href={`/outreach/${c.id}`} className="block group py-2 px-3 -mx-3 transition-colors hover:bg-[var(--parchment)]">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="font-display text-base text-ink truncate">{c.name}</p>
+                      <span
+                        className="tag"
+                        style={{
+                          color: c.status === "active" ? "var(--survey-green)" : "var(--ink-faded)",
+                        }}
+                      >
+                        {c.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
+                      <span>{c.total_messages} msgs</span>
+                      <span>·</span>
+                      <span>{c.sent_count} sent</span>
+                      {c.replied_count > 0 && (
+                        <>
+                          <span>·</span>
+                          <span style={{ color: "var(--oxblood)" }}>{c.replied_count} replies</span>
+                        </>
+                      )}
+                    </div>
+                    {c.total_messages > 0 && (
+                      <div className="mt-2 h-px relative" style={{ background: "var(--parchment-edge)" }}>
+                        <div
+                          className="absolute inset-y-0 left-0 -top-px h-0.5"
+                          style={{
+                            width: `${Math.min((c.sent_count / c.total_messages) * 100, 100)}%`,
+                            background: "var(--oxblood)",
+                          }}
+                        />
+                      </div>
+                    )}
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-gray-400 text-sm">No hot leads yet. Score your contacts to see them here.</p>
+            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
+              <Link href="/outreach" className="link not-italic">Open a campaign</Link> to begin dispatch.
+            </p>
           )}
-        </div>
-      </div>
+        </Panel>
+
+        <Panel title="Hot Leads" eyebrow="Day Book">
+          {hotLeads.length > 0 ? (
+            <ul className="space-y-3">
+              {hotLeads.map((c) => {
+                const score = c.ai_lead_score || 0;
+                const scoreColor =
+                  score >= 80 ? "var(--oxblood)" :
+                  score >= 60 ? "var(--gold)" :
+                  "var(--ink-faded)";
+                return (
+                  <li key={c.id}>
+                    <Link href={`/contacts/${c.id}`} className="block group py-2 px-3 -mx-3 transition-colors hover:bg-[var(--parchment)]">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="font-display text-base text-ink">
+                          {c.first_name} {c.last_name}
+                        </p>
+                        <span className="font-mono text-sm" style={{ color: scoreColor }}>
+                          {Math.round(score).toString().padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div className="text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
+                        {c.preferred_parishes?.slice(0, 2).join(" · ") || "No parish/county pref"}
+                        {c.budget_max ? ` · up to ${formatMoney(c.budget_max)}` : ""}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
+              No hot leads yet. Score contacts to populate this column.
+            </p>
+          )}
+        </Panel>
+      </section>
 
       {/* Recent Activity */}
-      <div className="mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+      <section className="mb-10">
+        <Panel title="Day Book" eyebrow="Logged Entries">
           {recentActivity.length > 0 ? (
-            <div className="space-y-3">
+            <ul className="divide-y" style={{ borderColor: "var(--parchment-edge)" }}>
               {recentActivity.map((a) => (
-                <div key={a.id} className="flex items-start gap-3">
-                  <span className="text-lg">{activityIcons[a.activity_type] || "📌"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{a.title}</p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(a.created_at).toLocaleDateString()} {new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                </div>
+                <li key={a.id} className="py-3 first:pt-0 last:pb-0 flex items-baseline gap-4">
+                  <span className="font-mono text-[0.7rem] tracking-widest uppercase whitespace-nowrap" style={{ color: "var(--ink-faded)" }}>
+                    {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
+                    {" · "}
+                    {new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="font-mono text-[0.7rem] tracking-widest uppercase" style={{ color: "var(--oxblood)" }}>
+                    {a.activity_type.replace("_", " ")}
+                  </span>
+                  <span className="text-sm flex-1" style={{ color: "var(--ink)" }}>{a.title}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-gray-400 text-sm">No recent activity. Activities will appear here as you work.</p>
+            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
+              No entries yet. Activity will be logged here as you work.
+            </p>
           )}
-        </div>
-      </div>
+        </Panel>
+      </section>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link href="/prospects/search" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-blue-100 hover:border-blue-300">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Find Prospects</h2>
-          <p className="text-gray-500">Search ATTOM public records for motivated sellers — absentee owners, pre-foreclosures, tax delinquent, and more.</p>
-        </Link>
-        <Link href="/ai" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-emerald-100 hover:border-emerald-300">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">AI Assistant</h2>
-          <p className="text-gray-500">Chat with your AI real estate assistant. Generate listings, analyze comps, and draft communications.</p>
-        </Link>
-        <Link href="/properties/new" className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-purple-100 hover:border-purple-300">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Add Property</h2>
-          <p className="text-gray-500">Enter a new property listing. The AI will help generate descriptions and suggest pricing.</p>
-        </Link>
-      </div>
+      {/* Quick Actions — three big plates */}
+      <section className="mb-6">
+        <div className="rule-fleuron mb-6"><span>✦</span></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <ActionPlate
+            href="/prospects/search"
+            stamp="Survey"
+            title="Find Prospects"
+            description="Search ATTOM public records for motivated sellers — absentee owners, pre-foreclosures, probate, and tax-delinquent."
+          />
+          <ActionPlate
+            href="/ai"
+            stamp="Atelier"
+            title="Open the AI Assistant"
+            description="Generate listings, analyze comps, and draft communications with a Gulf-South-aware AI."
+            accent
+          />
+          <ActionPlate
+            href="/properties/new"
+            stamp="Register"
+            title="Add a Property"
+            description="Record a new property to the atlas. AI helps draft listings and suggests pricing."
+          />
+        </div>
+      </section>
     </div>
+  );
+}
+
+function Panel({
+  title,
+  eyebrow,
+  link,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  link?: { href: string; label: string };
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="panel panel-shadow corner-ornaments p-6 relative">
+      <span className="corner-tr" />
+      <span className="corner-bl" />
+      <div className="flex items-baseline justify-between mb-4">
+        <div>
+          <p className="stamp mb-1">{eyebrow}</p>
+          <h3 className="font-display text-2xl text-ink">{title}</h3>
+        </div>
+        {link && (
+          <Link href={link.href} className="font-mono text-[0.7rem] tracking-widest uppercase hover:underline" style={{ color: "var(--oxblood)" }}>
+            {link.label} →
+          </Link>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ActionPlate({
+  href,
+  stamp,
+  title,
+  description,
+  accent = false,
+}: {
+  href: string;
+  stamp: string;
+  title: string;
+  description: string;
+  accent?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="panel panel-shadow corner-ornaments p-7 block transition-all hover:-translate-y-0.5 relative group"
+      style={
+        accent
+          ? { background: "var(--ink)", color: "var(--parchment)", borderColor: "var(--ink)" }
+          : undefined
+      }
+    >
+      <span className="corner-tr" style={accent ? { borderColor: "var(--parchment-edge)", opacity: 0.4 } : undefined} />
+      <span className="corner-bl" style={accent ? { borderColor: "var(--parchment-edge)", opacity: 0.4 } : undefined} />
+      <p className={accent ? "font-mono text-[0.65rem] tracking-widest uppercase mb-3" : "stamp mb-3"}
+         style={accent ? { color: "var(--oxblood)" } : undefined}>
+        {stamp}
+      </p>
+      <h3 className="font-display text-2xl mb-2 leading-tight"
+          style={accent ? { color: "var(--parchment)" } : { color: "var(--ink)" }}>
+        {title}
+      </h3>
+      <p className="text-sm leading-relaxed"
+         style={accent ? { color: "var(--kraft)" } : { color: "var(--ink-soft)" }}>
+        {description}
+      </p>
+      <span className="mt-4 inline-block font-mono text-[0.7rem] tracking-widest uppercase group-hover:translate-x-1 transition-transform"
+            style={accent ? { color: "var(--oxblood)" } : { color: "var(--oxblood)" }}>
+        Open →
+      </span>
+    </Link>
   );
 }

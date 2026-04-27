@@ -1,26 +1,255 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Cartographer's Office — palette, type, textures
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Palette */
+  --parchment:        #f3e8d0;  /* page background, aged paper */
+  --parchment-deep:   #ebdcb9;  /* card / panel background */
+  --parchment-edge:   #d9c79b;  /* hairline rules, panel edges */
+  --ink:              #1a2330;  /* primary text, deep navy ink */
+  --ink-soft:         #4a5365;  /* secondary text */
+  --ink-faded:        #8a7e63;  /* muted, sepia-leaning */
+  --oxblood:          #b04428;  /* primary accent — copper / hot lead */
+  --oxblood-deep:     #8a341e;  /* hover / pressed */
+  --survey-green:     #38563f;  /* "active" state, properties */
+  --survey-green-soft:#5a7a60;
+  --gold:             #b8893d;  /* warnings, in-progress */
+  --slate-blue:       #3c5871;  /* secondary, info */
+  --kraft:            #c9b48a;  /* tertiary surface */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--parchment);
+  --color-foreground: var(--ink);
+  --color-parchment:        var(--parchment);
+  --color-parchment-deep:   var(--parchment-deep);
+  --color-parchment-edge:   var(--parchment-edge);
+  --color-ink:              var(--ink);
+  --color-ink-soft:         var(--ink-soft);
+  --color-ink-faded:        var(--ink-faded);
+  --color-oxblood:          var(--oxblood);
+  --color-oxblood-deep:     var(--oxblood-deep);
+  --color-survey-green:     var(--survey-green);
+  --color-survey-green-soft:var(--survey-green-soft);
+  --color-gold:             var(--gold);
+  --color-slate-blue:       var(--slate-blue);
+  --color-kraft:            var(--kraft);
+
+  --font-display: var(--font-display);
+  --font-body:    var(--font-body);
+  --font-mono:    var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ============================================================
+   Body defaults
+   ============================================================ */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: var(--font-body), Georgia, serif;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+}
+
+.font-display { font-family: var(--font-display), Georgia, serif; letter-spacing: -0.01em; }
+.font-body    { font-family: var(--font-body), Georgia, serif; }
+.font-mono    { font-family: var(--font-mono), ui-monospace, monospace; }
+
+/* ============================================================
+   Textures — paper grain + topographic contours, both inline SVG
+   so no asset pipeline is needed.
+   ============================================================ */
+
+.paper-grain {
+  background-image:
+    radial-gradient(rgba(70, 50, 20, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(70, 50, 20, 0.04) 1px, transparent 1px);
+  background-size: 4px 4px, 11px 11px;
+  background-position: 0 0, 2px 5px;
+}
+
+.paper-grain-soft {
+  background-image: radial-gradient(rgba(70, 50, 20, 0.035) 1px, transparent 1px);
+  background-size: 5px 5px;
+}
+
+.topo-bg {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'><g fill='none' stroke='%23b04428' stroke-width='0.6' opacity='0.10'><circle cx='120' cy='120' r='30'/><circle cx='120' cy='120' r='55'/><circle cx='120' cy='120' r='80'/><circle cx='120' cy='120' r='105'/><circle cx='120' cy='120' r='130'/></g></svg>");
+  background-size: 240px 240px;
+  background-repeat: repeat;
+}
+
+/* ============================================================
+   Cartographic primitives
+   ============================================================ */
+
+/* Decorative hairline rule with a fleuron in the middle.
+   Use as: <div class="rule-fleuron"><span>✦</span></div>
+*/
+.rule-fleuron {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--ink-faded);
+}
+.rule-fleuron::before,
+.rule-fleuron::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--parchment-edge), transparent);
+}
+.rule-fleuron > span {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1rem;
+  letter-spacing: 0.3em;
+}
+
+/* Corner ornaments — apply to a relatively-positioned panel */
+.corner-ornaments::before,
+.corner-ornaments::after,
+.corner-ornaments > .corner-tl,
+.corner-ornaments > .corner-tr {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--parchment-edge);
+  pointer-events: none;
+}
+.corner-ornaments::before { top: 6px; left: 6px;  border-top: 1px solid; border-left: 1px solid; }
+.corner-ornaments::after  { bottom: 6px; right: 6px; border-bottom: 1px solid; border-right: 1px solid; }
+.corner-ornaments > .corner-tr { top: 6px; right: 6px; border-top: 1px solid; border-right: 1px solid; }
+.corner-ornaments > .corner-bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
+
+/* Survey panel — the standard parchment card */
+.panel {
+  background: var(--parchment-deep);
+  border: 1px solid var(--parchment-edge);
+  position: relative;
+}
+
+.panel-shadow {
+  box-shadow:
+    0 1px 0 rgba(255, 250, 235, 0.7) inset,
+    0 1px 1px rgba(60, 35, 10, 0.04),
+    0 8px 24px -16px rgba(60, 35, 10, 0.18);
+}
+
+/* "Stamp" — small uppercase oxblood eyebrow text */
+.stamp {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--oxblood);
+  font-weight: 500;
+}
+.stamp-ink {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* Leader-dot row — used in TOC nav */
+.toc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.toc-row > .toc-leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--parchment-edge);
+  transform: translateY(-3px);
+}
+
+/* Buttons */
+.btn-ink {
+  background: var(--ink);
+  color: var(--parchment);
+  border: 1px solid var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.1rem;
+  transition: background 120ms ease;
+}
+.btn-ink:hover { background: var(--oxblood); border-color: var(--oxblood); }
+.btn-ink:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ink:disabled:hover { background: var(--ink); border-color: var(--ink); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--parchment-edge);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 1rem;
+  transition: all 120ms ease;
+}
+.btn-ghost:hover { border-color: var(--ink); }
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Inputs */
+.field {
+  background: rgba(255, 250, 235, 0.5);
+  border: 1px solid var(--parchment-edge);
+  color: var(--ink);
+  font-family: var(--font-body), Georgia, serif;
+  padding: 0.5rem 0.7rem;
+  transition: border-color 120ms ease;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--ink);
+  background: rgba(255, 250, 235, 0.85);
+}
+.field::placeholder { color: var(--ink-faded); }
+
+/* Pill tags styled as wax-stamp chips */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  border-radius: 0;
+}
+
+/* Subtle link */
+a.link, .link {
+  color: var(--oxblood);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+a.link:hover, .link:hover { color: var(--oxblood-deep); }
+
+/* Reset Leaflet popup so it matches the theme */
+.leaflet-popup-content-wrapper {
+  background: var(--parchment-deep) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--parchment-edge) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 4px 16px -8px rgba(60, 35, 10, 0.25) !important;
+}
+.leaflet-popup-tip {
+  background: var(--parchment-deep) !important;
+  border: 1px solid var(--parchment-edge) !important;
+}
+.leaflet-container {
+  font-family: var(--font-body), Georgia, serif !important;
 }

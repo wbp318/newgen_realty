@@ -1,20 +1,31 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Serif_Display, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = DM_Serif_Display({
+  variable: "--font-display",
+  weight: "400",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const body = Newsreader({
+  variable: "--font-body",
+  weight: ["300", "400", "500", "600"],
   subsets: ["latin"],
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "NewGen Realty AI",
+  title: "NewGen Realty — Office of the Cartographer",
   description: "AI-powered real estate platform for Louisiana, Arkansas, and Mississippi",
 };
 
@@ -26,11 +37,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${display.variable} ${body.variable} ${mono.variable} antialiased font-body`}
       >
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen bg-parchment text-ink">
           <Sidebar />
-          <main className="flex-1 bg-gray-50 p-6">{children}</main>
+          <main className="flex-1 px-10 py-10 paper-grain">{children}</main>
         </div>
       </body>
     </html>
