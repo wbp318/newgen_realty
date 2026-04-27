@@ -206,6 +206,19 @@ export interface ProspectGeoPoint {
   ai_prospect_score: number | null;
 }
 
+export interface PropertyGeoPoint {
+  id: string;
+  latitude: number;
+  longitude: number;
+  street_address: string;
+  city: string | null;
+  state: string | null;
+  parish: string | null;
+  property_type: string;
+  status: string;
+  asking_price: number | null;
+}
+
 export interface GeocodeBackfillResult {
   scanned: number;
   updated: number;

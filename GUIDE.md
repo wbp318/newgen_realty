@@ -21,6 +21,7 @@ Everything you need to know to use the platform. Terms, statuses, workflows, and
 13. [Activity Types](#13-activity-types)
 14. [Status Reference](#14-status-reference)
 15. [Complete Pipeline — End to End](#15-complete-pipeline--end-to-end)
+16. [Farm Map](#16-farm-map)
 
 ---
 
@@ -669,6 +670,90 @@ Here's the full workflow from finding a prospect to closing a deal:
 27. AI tells you what's working and what to change
 28. Create your next campaign with optimized approach
 29. Check **Dashboard Insights** for portfolio-wide analysis
+
+---
+
+## 16. Farm Map
+
+`/map` is the geographic view of your business — your "farm." A real-estate farm
+is the area you work repeatedly: where you mail, knock, and build name
+recognition. The map layers prospects (circles) over properties (squares) so you
+can see leads relative to your inventory at a glance.
+
+### What you see
+
+| Shape | What it is | Color by |
+|-------|------------|----------|
+| Circle | Prospect (cold lead from public records) | AI prospect score (red 80+, amber 60-79, yellow 40-59, blue <40) |
+| Square | Property (your inventory) | Status (green active, blue pending, purple sold, gray draft/withdrawn) |
+
+There's also a heat overlay (prospect density only — properties aren't included
+in the heat) and a parish/county boundary overlay for LA, AR, and MS.
+
+### How prospects get on the map
+
+Prospects are geocoded automatically:
+- **ATTOM search import** — coords are saved at import time
+- **Manual create** at `/prospects/new` — geocoded on save
+- **Already imported but missing coords** — click "Geocode missing" on `/map`
+  to backfill up to 50 at a time
+
+### How properties get on the map
+
+Properties are geocoded automatically:
+- **Manual create** at `/properties/new` — geocoded on save
+- **Edit** — re-geocoded if you change `street_address`, `city`, `state`, or `zip_code`
+
+### Address rules (both prospects and properties)
+
+The geocoder is OpenStreetMap Nominatim — a real geocoder, free, no key required.
+
+- **Use real addresses.** Fake/test addresses (e.g. "123 Test St, Nowhere") will
+  silently fail to geocode. The row gets created but won't appear on the map
+  until you fix the address.
+- **ZIP code: 5-digit is fine.** ZIP+4 (e.g. `70130-1234`) also works since the
+  DB column is `String(10)`, but it gives no extra accuracy. Nominatim relies
+  on street + city + state and uses ZIP only as a tiebreaker.
+- **Throttle: ~1 second per add** (Nominatim ToS, 1 req/sec global). Creating
+  5 prospects in a row takes ~5 seconds total.
+- **Geocoding is best-effort.** A failure does not block the create — the row
+  is saved with `latitude`, `longitude`, and `geocoded_at` left null.
+- **Rural areas may pin at the town center**, not the exact street. OSM has
+  spotty street-level coverage in small unincorporated communities. The
+  geocoder falls back through: street → city+state+zip → city+state →
+  zip+state, taking the most specific match that resolves. So a property
+  on a back road in Transylvania, LA will show as a square at the
+  Transylvania town center rather than not appearing at all.
+
+### Filters
+
+| Control | Affects | Notes |
+|---------|---------|-------|
+| Min score | Prospects only | Score doesn't apply to properties |
+| State (LA/AR/MS) | Both layers | |
+| Prospect types (multi-select) | Prospects only | Up to 10 types |
+| Click a parish on the map | Both layers | Filters to that parish; click the same parish again or the × chip to clear |
+| Basemap (Street / Satellite) | Tiles | Esri World Imagery for satellite, no key needed |
+| Heat layer toggle | Prospects only | |
+| Prospects toggle | Prospect markers visibility | |
+| Properties toggle | Property markers visibility | |
+| Parish lines toggle | Boundary overlay visibility | |
+
+The map auto-fits its zoom to the loaded points on first render. Subsequent
+filter changes don't re-fit — pan and zoom yourself.
+
+### Tips
+
+- **Layer prospects on properties to find target areas.** If you've sold three
+  houses in Bossier and have 20 hot prospects clustered there, lead with proof
+  in your outreach.
+- **Use the score filter to triage.** Set min score to 80 to see only your
+  hottest prospects — anything below 60 is usually noise on the first pass.
+- **Click a parish to focus.** It filters both prospects and properties to
+  exactly that parish/county. Click the same parish again or the × chip
+  above the map to clear.
+- **Properties appear at the address you give them**, not at the lot polygon.
+  Parcel polygons via Regrid are on the roadmap.
 
 ---
 

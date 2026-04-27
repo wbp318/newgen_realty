@@ -95,8 +95,31 @@ export const batchDncCheck = (prospectIds: string[]) =>
   api.post("/api/prospects/batch-dnc-check", prospectIds);
 export const getProspectGeoPoints = (params?: Record<string, string | number>) =>
   api.get("/api/prospects/geo", { params });
-export const runGeocodeBackfill = (limit: number = 50) =>
-  api.post("/api/prospects/geocode-backfill", null, { params: { limit } });
+export const getPropertyGeoPoints = (params?: Record<string, string | number>) =>
+  api.get("/api/properties/geo", { params });
+export const runGeocodeBackfill = async (limit: number = 50) => {
+  const [prospectRes, propertyRes] = await Promise.all([
+    api.post<{ scanned: number; updated: number; failed: number }>(
+      "/api/prospects/geocode-backfill",
+      null,
+      { params: { limit } }
+    ),
+    api.post<{ scanned: number; updated: number; failed: number }>(
+      "/api/properties/geocode-backfill",
+      null,
+      { params: { limit } }
+    ),
+  ]);
+  return {
+    data: {
+      scanned: prospectRes.data.scanned + propertyRes.data.scanned,
+      updated: prospectRes.data.updated + propertyRes.data.updated,
+      failed: prospectRes.data.failed + propertyRes.data.failed,
+      prospects: prospectRes.data,
+      properties: propertyRes.data,
+    },
+  };
+};
 
 // Prospect Lists
 export const getProspectLists = () => api.get("/api/prospects/lists");

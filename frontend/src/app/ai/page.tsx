@@ -24,6 +24,7 @@ export default function AIAssistantPage() {
     street_address: "",
     city: "",
     parish: "",
+    state: "LA",
     property_type: "single_family",
     bedrooms: "",
     bathrooms: "",
@@ -101,9 +102,10 @@ export default function AIAssistantPage() {
   async function handleGenerateListing(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    const parishLabel = listingForm.state === "LA" ? "Parish" : "County";
     const userMsg: ChatMessage = {
       role: "user",
-      content: `Generate listing for: ${listingForm.street_address}, ${listingForm.city}, ${listingForm.parish} Parish`,
+      content: `Generate listing for: ${listingForm.street_address}, ${listingForm.city}, ${listingForm.parish} ${parishLabel} (${listingForm.state})`,
     };
     setMessages((prev) => [...prev, userMsg]);
 
@@ -170,7 +172,14 @@ export default function AIAssistantPage() {
           <form onSubmit={handleGenerateListing} className="mt-4 space-y-2 text-sm">
             <input placeholder="Street Address" value={listingForm.street_address} onChange={(e) => setListingForm({ ...listingForm, street_address: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" required />
             <input placeholder="City" value={listingForm.city} onChange={(e) => setListingForm({ ...listingForm, city: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" required />
-            <input placeholder="Parish" value={listingForm.parish} onChange={(e) => setListingForm({ ...listingForm, parish: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" required />
+            <div className="grid grid-cols-3 gap-2">
+              <input placeholder={listingForm.state === "LA" ? "Parish" : "County"} value={listingForm.parish} onChange={(e) => setListingForm({ ...listingForm, parish: e.target.value })} className="col-span-2 border rounded px-2 py-1 text-gray-900" required />
+              <select value={listingForm.state} onChange={(e) => setListingForm({ ...listingForm, state: e.target.value })} className="border rounded px-2 py-1 text-gray-900">
+                <option value="LA">LA</option>
+                <option value="AR">AR</option>
+                <option value="MS">MS</option>
+              </select>
+            </div>
             <select value={listingForm.property_type} onChange={(e) => setListingForm({ ...listingForm, property_type: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900">
               <option value="single_family">Single Family</option>
               <option value="multi_family">Multi Family</option>

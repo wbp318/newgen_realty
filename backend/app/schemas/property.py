@@ -74,3 +74,16 @@ class PropertyResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PropertyGeoPoint(BaseModel):
+    id: str
+    latitude: float
+    longitude: float
+    street_address: str
+    city: Optional[str] = None
+    state: Optional[str] = None
+    parish: Optional[str] = None
+    property_type: str
+    status: str
+    asking_price: Optional[int] = None

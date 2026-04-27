@@ -38,23 +38,7 @@ def _throttle() -> None:
         _last_request_ts = time.monotonic()
 
 
-def geocode(
-    address: Optional[str],
-    city: Optional[str] = None,
-    state: Optional[str] = None,
-    postal_code: Optional[str] = None,
-) -> Optional[dict]:
-    """Return {"latitude": float, "longitude": float, "display_name": str}
-    or None if the address can't be resolved.
-    """
-    if not is_configured():
-        return None
-
-    parts = [p for p in (address, city, state, postal_code) if p]
-    if not parts:
-        return None
-    query = ", ".join(parts)
-
+def _query_nominatim(query: str) -> Optional[dict]:
     _throttle()
     try:
         with httpx.Client(timeout=10) as client:
@@ -87,3 +71,45 @@ def geocode(
         }
     except (KeyError, TypeError, ValueError):
         return None
+
+
+def geocode(
+    address: Optional[str],
+    city: Optional[str] = None,
+    state: Optional[str] = None,
+    postal_code: Optional[str] = None,
+) -> Optional[dict]:
+    """Return {"latitude": float, "longitude": float, "display_name": str,
+    "precision": "street" | "locality" | "postal"} or None.
+
+    Tries progressively less specific queries so rural addresses where
+    Nominatim has no street-level data still get a town-center marker:
+        1. street + city + state + postal
+        2. city + state + postal
+        3. city + state
+        4. postal + state (last resort, often whole zip area)
+    """
+    if not is_configured():
+        return None
+
+    attempts: list[tuple[str, str]] = []
+    if address:
+        full = ", ".join(p for p in (address, city, state, postal_code) if p)
+        if full:
+            attempts.append(("street", full))
+    if city:
+        locality = ", ".join(p for p in (city, state, postal_code) if p)
+        if locality:
+            attempts.append(("locality", locality))
+        locality_no_zip = ", ".join(p for p in (city, state) if p)
+        if locality_no_zip and locality_no_zip != locality:
+            attempts.append(("locality", locality_no_zip))
+    if postal_code and state:
+        attempts.append(("postal", f"{postal_code}, {state}"))
+
+    for precision, query in attempts:
+        result = _query_nominatim(query)
+        if result:
+            result["precision"] = precision
+            return result
+    return None
