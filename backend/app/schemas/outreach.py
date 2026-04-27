@@ -107,6 +107,22 @@ class GenerateMessageResponse(BaseModel):
     compliance_flags: list[str]
 
 
+class CampaignStatsResponse(BaseModel):
+    campaign_id: str
+    total: int
+    queued: int
+    sent: int
+    delivered: int
+    opened: int
+    replied: int
+    bounced: int
+    failed: int
+    # Rates as 0-1 floats; 0 when the denominator is 0.
+    delivery_rate: float
+    open_rate: float
+    reply_rate: float
+
+
 class CampaignInsightsResponse(BaseModel):
     campaign_id: str
     total_sent: int

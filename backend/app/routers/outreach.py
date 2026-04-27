@@ -16,6 +16,7 @@ from app.models.prospect import ConsentStatus, Prospect
 from app.models.prospect_list import ProspectList
 from app.schemas.outreach import (
     CampaignInsightsResponse,
+    CampaignStatsResponse,
     GenerateMessageRequest,
     GenerateMessageResponse,
     OutreachCampaignCreate,
@@ -75,6 +76,55 @@ async def get_campaign(campaign_id: str, db: AsyncSession = Depends(get_db)):
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
     return campaign
+
+
+@router.get("/campaigns/{campaign_id}/stats", response_model=CampaignStatsResponse)
+async def campaign_stats(campaign_id: str, db: AsyncSession = Depends(get_db)):
+    """Per-campaign performance numbers from the OutreachMessage table.
+
+    Counts messages by progression timestamp (sent_at / delivered_at /
+    opened_at / replied_at) rather than just the current `status`
+    column, since status is monotonic — an OPENED message has already
+    progressed past DELIVERED and a status-only count would undercount.
+    """
+    exists = (
+        await db.execute(select(OutreachCampaign.id).where(OutreachCampaign.id == campaign_id))
+    ).scalar_one_or_none()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    msgs = (
+        await db.execute(
+            select(OutreachMessage).where(OutreachMessage.campaign_id == campaign_id)
+        )
+    ).scalars().all()
+
+    total = len(msgs)
+    queued = sum(1 for m in msgs if m.status == MessageStatus.QUEUED.value)
+    sent = sum(1 for m in msgs if m.sent_at is not None)
+    delivered = sum(1 for m in msgs if m.delivered_at is not None)
+    opened = sum(1 for m in msgs if m.opened_at is not None)
+    replied = sum(1 for m in msgs if m.replied_at is not None)
+    bounced = sum(1 for m in msgs if m.status == MessageStatus.BOUNCED.value)
+    failed = sum(1 for m in msgs if m.status == MessageStatus.FAILED.value)
+
+    def _rate(num: int, den: int) -> float:
+        return round(num / den, 4) if den > 0 else 0.0
+
+    return CampaignStatsResponse(
+        campaign_id=campaign_id,
+        total=total,
+        queued=queued,
+        sent=sent,
+        delivered=delivered,
+        opened=opened,
+        replied=replied,
+        bounced=bounced,
+        failed=failed,
+        delivery_rate=_rate(delivered, sent),
+        open_rate=_rate(opened, delivered),
+        reply_rate=_rate(replied, sent),
+    )
 
 
 @router.put("/campaigns/{campaign_id}", response_model=OutreachCampaignResponse)

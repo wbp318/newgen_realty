@@ -152,6 +152,8 @@ export const generateOutreachMessage = (data: Record<string, unknown>) =>
   api.post("/api/outreach/generate-message", data);
 export const getCampaignMessages = (campaignId: string) =>
   api.get(`/api/outreach/campaigns/${campaignId}/messages`);
+export const getCampaignStats = (campaignId: string) =>
+  api.get(`/api/outreach/campaigns/${campaignId}/stats`);
 export const getCampaignInsights = (campaignId: string) =>
   api.post(`/api/outreach/campaigns/${campaignId}/insights`);
 export const activateCampaign = (campaignId: string) =>

@@ -331,6 +331,21 @@ export interface GeneratedMessage {
   compliance_flags: string[];
 }
 
+export interface CampaignStats {
+  campaign_id: string;
+  total: number;
+  queued: number;
+  sent: number;
+  delivered: number;
+  opened: number;
+  replied: number;
+  bounced: number;
+  failed: number;
+  delivery_rate: number;  // 0-1
+  open_rate: number;      // 0-1
+  reply_rate: number;     // 0-1
+}
+
 export interface CampaignInsights {
   campaign_id: string;
   total_sent: number;

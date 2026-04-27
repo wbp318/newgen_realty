@@ -7,6 +7,7 @@ import {
   getOutreachCampaign,
   updateOutreachCampaign,
   getCampaignMessages,
+  getCampaignStats,
   getCampaignInsights,
   activateCampaign,
   pauseCampaign,
@@ -16,6 +17,7 @@ import type {
   OutreachCampaign,
   OutreachMessage,
   CampaignInsights,
+  CampaignStats,
   SequenceStep,
 } from "@/lib/types";
 
@@ -30,6 +32,7 @@ export default function CampaignDetailPage() {
 
   const [campaign, setCampaign] = useState<OutreachCampaign | null>(null);
   const [messages, setMessages] = useState<OutreachMessage[]>([]);
+  const [stats, setStats] = useState<CampaignStats | null>(null);
   const [insights, setInsights] = useState<CampaignInsights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
@@ -42,7 +45,17 @@ export default function CampaignDetailPage() {
   useEffect(() => {
     loadCampaign();
     loadMessages();
+    loadStats();
   }, [id]);
+
+  async function loadStats() {
+    try {
+      const res = await getCampaignStats(id);
+      setStats(res.data);
+    } catch {
+      // stats are optional; ignore on failure
+    }
+  }
 
   async function loadCampaign() {
     try {
@@ -399,6 +412,43 @@ export default function CampaignDetailPage() {
         )}
       </div>
 
+      {/* Performance stats */}
+      {stats && stats.total > 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Performance</h2>
+            <button
+              onClick={loadStats}
+              className="text-xs text-gray-400 hover:text-gray-600"
+              title="Refresh stats"
+            >
+              ↻ Refresh
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-5">
+            {[
+              { label: "Total",     value: stats.total,     color: "text-gray-900" },
+              { label: "Queued",    value: stats.queued,    color: "text-amber-600" },
+              { label: "Sent",      value: stats.sent,      color: "text-blue-600" },
+              { label: "Delivered", value: stats.delivered, color: "text-emerald-600" },
+              { label: "Opened",    value: stats.opened,    color: "text-purple-600" },
+              { label: "Replied",   value: stats.replied,   color: "text-pink-600" },
+              { label: "Failed",    value: stats.failed + stats.bounced, color: "text-red-600" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+            <RateBar label="Delivery rate" value={stats.delivery_rate} color="bg-emerald-500" hint="delivered ÷ sent" />
+            <RateBar label="Open rate"     value={stats.open_rate}     color="bg-purple-500" hint="opened ÷ delivered" />
+            <RateBar label="Reply rate"    value={stats.reply_rate}    color="bg-pink-500"   hint="replied ÷ sent" />
+          </div>
+        </div>
+      )}
+
       {/* AI Insights */}
       {insights && (
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-purple-100">
@@ -529,6 +579,35 @@ export default function CampaignDetailPage() {
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+function RateBar({
+  label,
+  value,
+  color,
+  hint,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  hint: string;
+}) {
+  const pct = Math.round(value * 1000) / 10; // 1 decimal place
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1">
+        <p className="text-xs font-medium text-gray-700">{label}</p>
+        <p className="text-sm font-semibold text-gray-900">{pct}%</p>
+      </div>
+      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={`h-1.5 rounded-full ${color}`}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
+      <p className="text-[0.65rem] text-gray-400 mt-1">{hint}</p>
     </div>
   );
 }
