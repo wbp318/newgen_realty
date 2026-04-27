@@ -400,7 +400,16 @@ export default function Dashboard() {
 
       {/* Recent Activity */}
       <section className="panel p-6 mb-8">
-        <h2 className="font-display text-2xl text-text mb-4">Recent Activity</h2>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="font-display text-2xl text-text">Recent Activity</h2>
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/exports/activities`}
+            className="link text-xs"
+            title="Download activities as CSV"
+          >
+            Export CSV →
+          </a>
+        </div>
         {recentActivity.length > 0 ? (
           <ul className="divide-y" style={{ borderColor: "var(--border-soft)" }}>
             {recentActivity.map((a) => (

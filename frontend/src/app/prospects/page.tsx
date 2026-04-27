@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getProspects, deleteProspect, getAttomStatus, bulkScoreProspects, batchDncCheck, batchSkipTrace } from "@/lib/api";
+import { getProspects, deleteProspect, getAttomStatus, bulkScoreProspects, batchDncCheck, batchSkipTrace, getIntegrationsStatus } from "@/lib/api";
 import type { Prospect } from "@/lib/types";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
@@ -82,15 +82,35 @@ const prospectFilters: FilterConfig[] = [
   { key: "min_score", label: "Min Score", type: "text", placeholder: "e.g. 50" },
 ];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function buildExportQuery(filters: Record<string, string>): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v && v !== "") params.set(k, v);
+  }
+  const s = params.toString();
+  return s ? `?${s}` : "";
+}
+
 export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [attomConfigured, setAttomConfigured] = useState<boolean | null>(null);
+  const [skipTraceConfigured, setSkipTraceConfigured] = useState<boolean | null>(null);
   const [bulkAction, setBulkAction] = useState(false);
 
   useEffect(() => {
     loadProspects();
     checkAttomStatus();
+    getIntegrationsStatus()
+      .then((r) => {
+        const skip = r.data.integrations.find(
+          (i: { key: string }) => i.key === "skip_trace"
+        );
+        setSkipTraceConfigured(skip?.configured ?? false);
+      })
+      .catch(() => setSkipTraceConfigured(false));
   }, [filters]);
 
   async function loadProspects() {
@@ -181,9 +201,18 @@ export default function ProspectsPage() {
               <button onClick={handleBulkDnc} disabled={bulkAction} className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50">
                 DNC Check
               </button>
-              <button onClick={handleBulkSkipTrace} disabled={bulkAction} className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50">
-                Skip Trace
-              </button>
+              {skipTraceConfigured && (
+                <button onClick={handleBulkSkipTrace} disabled={bulkAction} className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700 disabled:opacity-50">
+                  Skip Trace
+                </button>
+              )}
+              <a
+                href={`${API_BASE}/api/exports/prospects${buildExportQuery(filters)}`}
+                className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700"
+                title="Download a CSV of prospects matching the current filters"
+              >
+                Export CSV
+              </a>
             </>
           )}
           <Link href="/prospects/search" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">

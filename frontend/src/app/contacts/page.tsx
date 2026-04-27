@@ -22,6 +22,17 @@ const contactFilters: FilterConfig[] = [
   { key: "min_score", label: "Min Score", type: "text", placeholder: "e.g. 60" },
 ];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function buildExportQuery(filters: Record<string, string>): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v && v !== "") params.set(k, v);
+  }
+  const s = params.toString();
+  return s ? `?${s}` : "";
+}
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -72,9 +83,18 @@ export default function ContactsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Contacts</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700">
-          {showForm ? "Cancel" : "+ Add Contact"}
-        </button>
+        <div className="flex gap-2">
+          <a
+            href={`${API_BASE}/api/exports/contacts${buildExportQuery(filters)}`}
+            className="text-sm px-3 py-2 rounded-lg border hover:bg-gray-50 text-gray-700"
+            title="Download a CSV of contacts matching the current filters"
+          >
+            Export CSV
+          </a>
+          <button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700">
+            {showForm ? "Cancel" : "+ Add Contact"}
+          </button>
+        </div>
       </div>
 
       {showForm && (
