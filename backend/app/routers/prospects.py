@@ -36,6 +36,10 @@ from app.services.rate_limit import rate_limit
 _search_rate_limit = rate_limit("prospects.search", limit=10, window_seconds=3600)
 # Per-minute cap on single-prospect skip trace.
 _skip_trace_rate_limit = rate_limit("prospects.skip_trace", limit=5, window_seconds=60)
+# Mutating endpoints trigger a Nominatim geocode behind the 1.1s global
+# lock — bursts saturate the threadpool. Match properties' limits.
+_create_rate_limit = rate_limit("prospects.create", limit=60, window_seconds=60)
+_backfill_rate_limit = rate_limit("prospects.geocode_backfill", limit=5, window_seconds=300)
 
 logger = logging.getLogger(__name__)
 
@@ -291,7 +295,7 @@ async def list_prospects(
     return result.scalars().all()
 
 
-@router.post("", response_model=ProspectResponse, status_code=201)
+@router.post("", response_model=ProspectResponse, status_code=201, dependencies=[Depends(_create_rate_limit)])
 async def create_prospect(data: ProspectCreate, db: AsyncSession = Depends(get_db)):
     prospect = Prospect(**data.model_dump(exclude_none=True))
     _apply_geocode(prospect)
@@ -410,7 +414,7 @@ async def get_prospect_geo(
     ]
 
 
-@router.post("/geocode-backfill")
+@router.post("/geocode-backfill", dependencies=[Depends(_backfill_rate_limit)])
 async def geocode_backfill(
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(get_db),

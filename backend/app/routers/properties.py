@@ -21,6 +21,15 @@ from app.services.rate_limit import rate_limit
 # 100 GET /api/properties per minute per IP — pentest target
 _general_rate_limit = rate_limit("properties.list", limit=100, window_seconds=60)
 
+# Mutating endpoints trigger a Nominatim geocode behind the 1.1s global
+# lock — without a limit, a burst saturates the threadpool. 60/min is
+# generous for normal use (manual entry, e2e test suites) and well below
+# what an attacker would need to DoS the geocoder.
+_create_rate_limit = rate_limit("properties.create", limit=60, window_seconds=60)
+# Backfill triggers up to 50 geocodes per call (~55s locked). Cap at
+# 5 per 5 minutes per IP — prevents stacking but allows reasonable use.
+_backfill_rate_limit = rate_limit("properties.geocode_backfill", limit=5, window_seconds=300)
+
 
 def _apply_geocode(prop: Property) -> None:
     """Best-effort geocoding — mutates property in place, silently no-ops on fail."""
@@ -84,7 +93,7 @@ async def list_properties(
     return result.scalars().all()
 
 
-@router.post("", response_model=PropertyResponse, status_code=201)
+@router.post("", response_model=PropertyResponse, status_code=201, dependencies=[Depends(_create_rate_limit)])
 async def create_property(data: PropertyCreate, db: AsyncSession = Depends(get_db)):
     prop = Property(**data.model_dump(exclude_none=True))
     _apply_geocode(prop)
@@ -160,7 +169,7 @@ async def get_property_geo(
     ]
 
 
-@router.post("/geocode-backfill")
+@router.post("/geocode-backfill", dependencies=[Depends(_backfill_rate_limit)])
 async def geocode_backfill(
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(get_db),

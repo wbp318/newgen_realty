@@ -79,9 +79,11 @@ See `app/services/rate_limit.py`. Five endpoints covered. The remaining
 production-grade work is to swap the in-memory store for Redis when
 scaling beyond a single backend process.
 
-**Open items at this layer:**
-- **Geocoder DoS vector.** `POST /api/properties` and `POST /api/prospects` aren't rate-limited and each triggers a Nominatim call gated by a 1.1s global lock. A burst of creates ties up the threadpool. Either (a) put a per-IP rate limit on the create endpoints, or (b) move geocoding to a background task. Low risk while only Tap is using the app; capture before going public.
-- **Backfill endpoints.** `POST /api/prospects/geocode-backfill` and `POST /api/properties/geocode-backfill` are bounded by `limit ≤ 200` per call but not rate-limited per IP. Same fix.
+**Open items at this layer:** none — geocoder DoS vector closed (see below).
+
+**Closed in this audit:**
+- **Geocoder DoS via creates.** `POST /api/properties` and `POST /api/prospects` now rate-limited at 60 per minute per IP. The 1.1s Nominatim lock can no longer be saturated by a burst of creates.
+- **Geocoder DoS via backfills.** `POST /api/properties/geocode-backfill` and `POST /api/prospects/geocode-backfill` rate-limited at 5 per 5 minutes per IP. Each call still does up to 50 geocodes (~55 seconds of work), but no caller can stack them.
 
 ---
 
@@ -227,7 +229,7 @@ Before going live, confirm each item:
 - [x] AI daily cost cap
 - [x] Resend webhook HMAC verified
 - [x] Twilio webhook X-Twilio-Signature verified (Item 9)
-- [ ] Rate limit on prospect/property create endpoints (Item 2 follow-up)
+- [x] Rate limit on prospect/property create + backfill endpoints (Item 2 follow-up)
 - [ ] Authentication implemented (Item 1)
 - [ ] Request logging w/ user attribution (Item 6)
 
@@ -251,5 +253,5 @@ Before going live, confirm each item:
 
 ## Audit changelog
 
-- **2026-04-27 (v0.2.5):** Rate limiting, security headers, Server-header suppression, max_length on text fields, JSON-size validator, geocoder fallback chain, county-portal directory replacing broken scrapers, **Twilio webhook signature validation**. Open finding: geocoder DoS via unrestricted creates. Auth deferred per operating decision.
+- **2026-04-27 (v0.2.5):** Rate limiting, security headers, Server-header suppression, max_length on text fields, JSON-size validator, geocoder fallback chain, county-portal directory replacing broken scrapers, **Twilio webhook signature validation**, **rate limits on prospect/property create + backfill endpoints to close the geocoder DoS vector**. All code-level pre-prod items closed except auth (deferred per operating decision). Remaining items are deployment-time (HTTPS, prod CORS, Postgres, request logging, dependency audit).
 - **2026-04-15 (v0.2.0):** Initial audit. Identified 9 pre-production items. Verified SQLi/XSS/error-leakage already handled.
