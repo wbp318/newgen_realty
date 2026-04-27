@@ -31,6 +31,8 @@ You can run the full platform with only an `ANTHROPIC_API_KEY` — every other k
 - TCPA compliance gating and opt-out processing
 - County / parish portal directory at `/portals` for free manual lookups
 - Live integration status panel on the dashboard tells you exactly what's configured
+- CSV export for prospects, contacts, and activities (filters mirror the list page)
+- Per-campaign performance stats (delivery / open / reply rate)
 
 **Locked behind keys (each can be added independently):**
 
@@ -297,6 +299,7 @@ Organize and *actually send* outreach at scale:
 - **Inbound reply handling** — Twilio webhook auto-processes STOP/UNSUBSCRIBE keywords (revokes consent, cancels future queued SMS for that prospect). Resend webhook updates delivered/opened/bounced statuses.
 - **Message tracking** — Status: draft → queued → sent → delivered → opened → replied (or failed/bounced)
 - **Manual send-now override** — Force-dispatch a single message outside the drip schedule (still compliance-gated)
+- **Performance stats** — Per-campaign delivery / open / reply rate bars + per-status counts on the campaign detail page (counts by progression timestamp, not status, so OPENED rows still count as DELIVERED + SENT)
 - **AI Campaign Insights** — Claude analyzes campaign performance and suggests optimizations
 - **Campaign management** — Draft, activate (expands sequence into queued messages), pause, complete lifecycle
 
@@ -467,15 +470,17 @@ This is how all the pieces connect — from finding a prospect to closing a deal
     AI lead scoring, property matching, communication drafting, activity tracking
 ```
 
-## API Endpoints (65+)
+## API Endpoints (75+)
 
-### Properties (5)
+### Properties (7)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/properties` | List properties (filterable by parish/county, state, status, type, price, beds, city, text search) |
-| POST | `/api/properties` | Create property |
+| GET | `/api/properties` | List properties (filterable by parish/county, state, status, type, price, beds, city, text search). Rate-limited 100/min/IP. |
+| POST | `/api/properties` | Create property — auto-geocodes via Nominatim. Rate-limited 60/min/IP. |
+| GET | `/api/properties/geo` | Lightweight geo points for the Farm Map (bbox + state/parish/status/types filters) |
+| POST | `/api/properties/geocode-backfill` | Fill in lat/lng on properties missing coordinates. Rate-limited 5/5min/IP. |
 | GET | `/api/properties/{id}` | Get property detail |
-| PUT | `/api/properties/{id}` | Update property (auto-logs activity) |
+| PUT | `/api/properties/{id}` | Update property (auto-logs activity, re-geocodes on address change) |
 | DELETE | `/api/properties/{id}` | Delete property |
 
 ### Contacts (5)
@@ -503,8 +508,8 @@ This is how all the pieces connect — from finding a prospect to closing a deal
 | POST | `/api/prospects/{id}/skip-trace` | Skip trace — find phone/email/address |
 | POST | `/api/prospects/batch-skip-trace` | Batch skip trace for multiple prospects |
 | POST | `/api/prospects/batch-dnc-check` | Batch DNC list check for all prospects with phone numbers |
-| POST | `/api/prospects/search-county` | Search free county/parish public record portals |
-| GET | `/api/prospects/county-sources` | List available county data sources by state |
+| GET | `/api/prospects/county-sources` | Curated portal directory for free LA/AR/MS public-record lookups (state filter optional) |
+| GET | `/api/prospects/county-lookup` | Look up the best portal URL for a given state + parish/county (umbrella fallback when no specific entry) |
 | GET | `/api/prospects/status` | Check ATTOM API connection status |
 | GET | `/api/prospects/lists` | List saved prospect lists |
 | POST | `/api/prospects/lists` | Create prospect list |
@@ -521,7 +526,8 @@ This is how all the pieces connect — from finding a prospect to closing a deal
 | POST | `/api/outreach/campaigns/{id}/activate` | Expand sequence_config into queued messages (idempotent) |
 | POST | `/api/outreach/campaigns/{id}/pause` | Pause campaign (queued messages resume on re-activate) |
 | GET | `/api/outreach/campaigns/{id}/messages` | List campaign messages (filterable by status) |
-| POST | `/api/outreach/generate-message` | AI-generate personalized outreach for one prospect |
+| GET | `/api/outreach/campaigns/{id}/stats` | Performance: delivery / open / reply rates + per-status counts |
+| POST | `/api/outreach/generate-message` | AI-generate personalized outreach for one prospect. Rate-limited 20/min/IP. |
 | POST | `/api/outreach/campaigns/{id}/generate-all` | Bulk-generate AI messages for entire prospect list |
 | PUT | `/api/outreach/messages/{id}/status` | Update message status (sent/delivered/opened/replied) — auto-updates campaign stats |
 | POST | `/api/outreach/messages/{id}/send-now` | Force-dispatch a single message immediately (still compliance-gated) |
@@ -544,6 +550,18 @@ This is how all the pieces connect — from finding a prospect to closing a deal
 | POST | `/api/conversations` | Create conversation |
 | GET | `/api/conversations/{id}` | Get conversation with all messages |
 | DELETE | `/api/conversations/{id}` | Delete conversation |
+
+### Integrations (1)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/integrations/status` | Per-integration configured-or-not, tier, what each unlocks, where to get a key. Powers the dashboard "Data Sources" panel. |
+
+### Exports (3)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/exports/prospects` | Stream prospects as CSV (filters mirror the list endpoint) |
+| GET | `/api/exports/contacts` | Stream contacts as CSV |
+| GET | `/api/exports/activities` | Stream activities as CSV (filterable by type and linked entity) |
 
 ### AI (12)
 | Method | Endpoint | Description |

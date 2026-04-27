@@ -79,8 +79,8 @@ All follow the same pattern established by `services/market_data.py`: sync funct
 
 - `services/market_data.py` — Realty Mole Property API (RapidAPI) for comparable sales
 - `services/prospect_data.py` — ATTOM Data API for public property records, owner data, AVM estimates
-- `services/skip_trace.py` — Pluggable skip tracing (free stub + BatchSkipTracing.com). Provider selected via `SKIP_TRACE_PROVIDER` config.
-- `services/county_data.py` — Free county/parish portal scrapers for LA, AR, MS
+- `services/skip_trace.py` — Pluggable skip tracing (free stub + BatchSkipTracing.com). Provider selected via `SKIP_TRACE_PROVIDER` config. The free stub returns empty arrays; the prospect-detail UI now hides the Skip Trace button when no paid provider is configured (decided 2026-04-27 — option "honest removal").
+- `services/county_data.py` — Curated LA/AR/MS portal **directory** (assessor + chancery clerk URLs). Replaces a scraping implementation that broke when ARCountyData added Cloudflare and the LA Prior Inc DNS went dead. Surface URLs to the user for manual lookup; don't try to scrape.
 - `services/email_sender.py` — Resend transactional email. Lazy-imports the SDK inside `send_email` so the backend boots without the library installed.
 - `services/sms_sender.py` — Twilio SMS. Normalizes US numbers to E.164; lazy-imports the SDK.
 - `services/geocoder.py` — OpenStreetMap Nominatim (free, no key). Enforces a 1.1s global throttle via a module-level lock; callers should expect ~1s per lookup. Per Nominatim ToS, send a descriptive `GEOCODE_USER_AGENT`. **Falls back progressively** when a full address doesn't resolve: `street+city+state+zip → city+state+zip → city+state → zip+state`. Returns the first match plus a `precision` field (`"street" | "locality" | "postal"`). This means rural addresses where OSM has no street-level data still pin at the town centroid instead of failing silently.
@@ -97,10 +97,18 @@ All follow the same pattern established by `services/market_data.py`: sync funct
 Sequence config lives on `OutreachCampaign.sequence_config` as `[{step, day_offset, medium, tone_override}]`. `POST /api/outreach/campaigns/{id}/activate` expands it into per-prospect queued messages with `scheduled_send_time = now + day_offset` (idempotent via the `uq_message_campaign_prospect_step` constraint). `POST /pause` flips status but does not cancel queued messages. `POST /messages/{id}/send-now` force-dispatches a single message.
 
 Inbound webhooks:
-- `POST /api/outreach/webhooks/resend` — HMAC-verified (Svix-style) via `INBOUND_WEBHOOK_SECRET` when set, otherwise accepts (dev mode). Updates message status on delivered/opened/bounced/complained.
-- `POST /api/outreach/webhooks/twilio` — delivery status callbacks + inbound SMS. STOP-keyword replies (`STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`) auto-revoke consent, set opt-out date, mark prospect do-not-contact, and cancel future queued SMS for that prospect.
+- `POST /api/outreach/webhooks/resend` — Svix-style HMAC verified via `INBOUND_WEBHOOK_SECRET` when set, accepts otherwise (dev). Updates message status on delivered/opened/bounced/complained.
+- `POST /api/outreach/webhooks/twilio` — Validates `X-Twilio-Signature` via the official `twilio.request_validator.RequestValidator` whenever `TWILIO_AUTH_TOKEN` is set; rejects forgeries with 401. Accepts unsigned in pure dev (no token). Set `TWILIO_WEBHOOK_URL` if you're behind a proxy / ngrok and `request.url` differs from what Twilio signed against. Handles delivery status callbacks + inbound SMS. STOP-keyword replies (`STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`) auto-revoke consent, set opt-out date, mark prospect do-not-contact, and cancel future queued SMS for that prospect.
 
 Twilio webhooks require `python-multipart` (listed in `requirements.txt`) for form parsing.
+
+### Hardening utilities (small, focused — read these before adding more)
+
+- `services/rate_limit.py` — In-memory sliding-window IP rate limiter. `rate_limit("name", limit=N, window_seconds=W)` returns a FastAPI dependency that raises 429 with `Retry-After`. Applied to 9 endpoints today: `GET /api/properties` (100/60s), `POST /api/properties` + `POST /api/prospects` (60/60s — geocoder lock saturation), the two `/geocode-backfill` endpoints (5/300s), `POST /api/ai/chat` (20/60s), `POST /api/prospects/search` (10/3600s — ATTOM cost), `POST /api/prospects/{id}/skip-trace` (5/60s), `POST /api/outreach/generate-message` (20/60s). Counters are per-process; replace with Redis when scaling out.
+- `schemas/_validators.py` — Exports `BoundedJSONDict` (and `BoundedJSONList`) annotated types backed by a Pydantic `BeforeValidator` that serializes the value and rejects payloads > 64 KB. Use these instead of bare `dict` for any user-controlled JSON column (`motivation_signals`, `property_data`, `features`, `extra_data`, `search_criteria`).
+- `routers/integrations.py` — `GET /api/integrations/status` returns each integration's `{configured, tier, unlocks, cost_note, where_to_get, key_hint}`. Powers the dashboard "Data Sources" panel and the `/portals` link. Never include full key values; the helper masks to last-4 characters only.
+- `routers/exports.py` — `GET /api/exports/{prospects,contacts,activities}` streaming `text/csv` via stdlib `csv` + `StreamingResponse`. UTF-8 BOM so Excel opens cleanly. No third-party deps.
+- `main.py` middleware — sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Server: newgen-realty` on every response. Combined with the `--no-server-header` uvicorn flag in the run command, the default `Server: uvicorn` no longer leaks.
 
 ### Geocoding + Farm Map
 
@@ -153,7 +161,7 @@ Activity model has `contact_id`, `property_id`, and `prospect_id` columns (all n
 
 Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/api.ts` (axios, baseURL defaults to `localhost:8000` via `NEXT_PUBLIC_API_URL`). Types in `lib/types.ts`. Path alias: `@/*` → `./src/*`. Tailwind v4 (no `tailwind.config.js`).
 
-Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot leads), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail with drip sequence builder + messages table), `/map` (Farm Map — both prospects and properties layered geographically).
+Key pages: `/` (dashboard — pipeline funnel, top prospects, campaigns, hot leads, Data Sources panel, Recent Activity), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions + CSV export), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment, gated skip-trace), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail — drip sequence, Performance stats, messages table), `/map` (Farm Map — both prospects and properties layered geographically), `/portals` (curated LA/AR/MS public-record portal directory linked from the Data Sources panel).
 
 #### Design system
 
@@ -192,8 +200,10 @@ Multi-state support requires careful UI labeling: LA uses "Parish", AR/MS use "C
 - Error responses must never leak raw exception details — return generic messages (e.g., "API error. Please try again later."), not `f"Error: {e}"`
 - Batch endpoints must enforce size limits via Pydantic `Field(max_length=N)` or `Body(max_length=N)`
 - Text search query params must have `max_length=100`
-- No authentication yet — see `SECURITY.md` for pre-production checklist
-- Pentest suite in `pentest/` — run after any security-related changes. Auth/IDOR tests auto-skip until auth is implemented.
+- All Create/Update schemas have `Field(max_length=N)` on every text field. JSON columns use `BoundedJSONDict` from `schemas/_validators.py` (64 KB cap).
+- New cost-bearing endpoints should declare a `rate_limit(...)` dependency. Pick limits that match the endpoint's real usage pattern — see `services/rate_limit.py` and the existing 9 declarations for examples.
+- **Auth is deferred** — not "not yet". User decided on 2026-04-27 not to add auth until the platform is feature-complete (testing friction). Don't add auth unless the user explicitly asks. Pentest's auth/IDOR/api-access suites auto-skip via a probe; "endpoint accessible without auth" pentest FAIL is expected. See `SECURITY.md` for the full pre-production checklist.
+- Pentest suite in `pentest/` — run after any security-related changes. Auth/IDOR tests auto-skip until auth is implemented. The general rate-limit test (`test_general_rate_limit`) uses an `httpx.Client` session for connection reuse — without it, sequential bare `httpx.get()` calls were slow enough that the sliding window expired entries before the limit triggered.
 - Scheduled messages must respect `contact_window_timezone` on Prospect (default America/Chicago) and the campaign's `send_window_start`/`send_window_end`, all within TCPA 8am–9pm recipient-local.
 - Webhooks in dev: Twilio/Vapi/Resend need a public URL. Use ngrok or Cloudflare Tunnel; leave `INBOUND_WEBHOOK_SECRET` unset locally to accept unsigned events.
 
@@ -206,8 +216,9 @@ Key optional vars:
 - `ATTOM_API_KEY` — prospecting engine (attomdata.com)
 - `SKIP_TRACE_PROVIDER` / `SKIP_TRACE_API_KEY` — skip tracing (default: `free`)
 - `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — email sending via Resend
-- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` — SMS via Twilio
-- `INBOUND_WEBHOOK_SECRET` — HMAC secret for Resend/Twilio webhook signature verification (when unset, webhooks accept without validation — dev only)
+- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` — SMS via Twilio. The Twilio webhook validates `X-Twilio-Signature` against `TWILIO_AUTH_TOKEN` automatically.
+- `TWILIO_WEBHOOK_URL` — override the URL used for Twilio signature validation when behind a reverse proxy / ngrok. Empty in plain local dev.
+- `INBOUND_WEBHOOK_SECRET` — HMAC secret for the Resend webhook (Twilio uses its own auth token, see above). When unset, the Resend webhook accepts without validation — dev only.
 - `SCHEDULER_ENABLED` (default: `true`), `SCHEDULER_TICK_SECONDS` (default: 60), `SCHEDULER_BATCH_SIZE` (default: 50)
 - `DAILY_SEND_CAP_EMAIL` / `DAILY_SEND_CAP_SMS` — global daily caps (overridable per-campaign via `daily_send_cap`)
 - `GEOCODE_PROVIDER` (default: `nominatim`), `GEOCODE_USER_AGENT` (required by Nominatim ToS)
