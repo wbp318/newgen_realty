@@ -95,6 +95,9 @@ export const batchDncCheck = (prospectIds: string[]) =>
   api.post("/api/prospects/batch-dnc-check", prospectIds);
 export const getProspectGeoPoints = (params?: Record<string, string | number>) =>
   api.get("/api/prospects/geo", { params });
+export const getIntegrationsStatus = () => api.get("/api/integrations/status");
+export const getCountyPortals = (state?: string) =>
+  api.get("/api/prospects/county-sources", { params: state ? { state } : undefined });
 export const getPropertyGeoPoints = (params?: Record<string, string | number>) =>
   api.get("/api/properties/geo", { params });
 export const runGeocodeBackfill = async (limit: number = 50) => {

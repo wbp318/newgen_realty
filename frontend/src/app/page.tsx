@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getProperties, getContacts, getActivities, getDashboardInsights, getProspects, getOutreachCampaigns } from "@/lib/api";
-import type { Property, Contact, Activity, DashboardInsights, Prospect, OutreachCampaign } from "@/lib/types";
+import { getProperties, getContacts, getActivities, getDashboardInsights, getProspects, getOutreachCampaigns, getIntegrationsStatus } from "@/lib/api";
+import type { Property, Contact, Activity, DashboardInsights, Prospect, OutreachCampaign, IntegrationsStatusResponse } from "@/lib/types";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -20,10 +20,12 @@ export default function Dashboard() {
   const [prospectStats, setProspectStats] = useState<Record<string, number>>({});
   const [topProspects, setTopProspects] = useState<Prospect[]>([]);
   const [activeCampaigns, setActiveCampaigns] = useState<OutreachCampaign[]>([]);
+  const [integrations, setIntegrations] = useState<IntegrationsStatusResponse | null>(null);
 
   useEffect(() => {
     loadDashboard();
     loadProspectData();
+    getIntegrationsStatus().then((r) => setIntegrations(r.data)).catch(() => {});
   }, []);
 
   async function loadDashboard() {
@@ -329,6 +331,72 @@ export default function Dashboard() {
           )}
         </Panel>
       </section>
+
+      {/* Integrations & Data Sources */}
+      {integrations && (
+        <section className="panel p-6 mb-8">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <h2 className="font-display text-2xl text-text">Data Sources</h2>
+              <p className="mt-1 text-xs" style={{ color: "var(--text-soft)" }}>
+                {integrations.summary.configured} of {integrations.summary.total} configured.
+                Free sources work today; paid sources unlock more on demand.
+              </p>
+            </div>
+            <Link href="/portals" className="link text-xs">
+              County portals →
+            </Link>
+          </div>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {integrations.integrations.map((i) => {
+              const tierColor =
+                i.tier === "core"      ? "var(--info)" :
+                i.tier === "free"      ? "var(--accent)" :
+                i.tier === "free-tier" ? "var(--warm)" :
+                "var(--text-faded)";
+              return (
+                <li
+                  key={i.key}
+                  className="flex items-start gap-3 px-3 py-2.5 rounded"
+                  style={{ background: i.configured ? "rgba(16, 185, 129, 0.06)" : "transparent", border: "1px solid var(--border-soft)" }}
+                >
+                  <span
+                    className="mt-1 inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: i.configured ? "var(--accent)" : "var(--text-faded)" }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-sm font-medium text-text">{i.name}</p>
+                      <span className="tag text-[0.6rem]" style={{ color: tierColor, borderColor: tierColor, opacity: 0.85 }}>
+                        {i.tier}
+                      </span>
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-soft)" }}>
+                      {i.unlocks}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-faded)" }}>
+                      {i.cost_note}
+                      {!i.configured && i.where_to_get && (
+                        <>
+                          {" · "}
+                          <a
+                            href={i.where_to_get}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="link"
+                          >
+                            Get a key →
+                          </a>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* Recent Activity */}
       <section className="panel p-6 mb-8">

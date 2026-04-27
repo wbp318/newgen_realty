@@ -206,6 +206,40 @@ export interface ProspectGeoPoint {
   ai_prospect_score: number | null;
 }
 
+export interface IntegrationStatus {
+  key: string;
+  name: string;
+  configured: boolean;
+  key_hint: string | null;
+  tier: "core" | "free" | "free-tier" | "paid";
+  unlocks: string;
+  cost_note: string;
+  where_to_get: string | null;
+  extra?: Record<string, unknown>;
+}
+
+export interface IntegrationsStatusResponse {
+  integrations: IntegrationStatus[];
+  summary: {
+    configured: number;
+    total: number;
+    core_ready: boolean;
+  };
+}
+
+export interface PortalEntry {
+  state: string;
+  county_or_parish: string;
+  label: string;
+  url: string;
+  type: "assessor" | "clerk" | "umbrella";
+}
+
+export interface CountyPortalsResponse {
+  portals: PortalEntry[];
+  count: number;
+}
+
 export interface PropertyGeoPoint {
   id: string;
   latitude: number;
