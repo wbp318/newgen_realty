@@ -295,17 +295,43 @@ async def create_prospect(data: ProspectCreate, db: AsyncSession = Depends(get_d
 
 
 @router.get("/county-sources")
-async def list_county_sources():
-    """List available county/parish data sources by state.
+async def list_county_sources(state: Optional[str] = Query(None, max_length=2)):
+    """Public-record portal directory for LA, AR, and MS.
+
+    Returns clickable URLs of parish/county assessor and chancery clerk
+    portals so an agent can do free manual lookups. We deliberately don't
+    scrape — both ARCountyData (Cloudflare) and the LA Prior Inc URLs
+    (dead DNS) blocked us; the directory model is honest and unbreakable.
 
     Defined ahead of `/{prospect_id}` so FastAPI doesn't treat the literal
     string "county-sources" as a prospect ID.
     """
-    return {
-        "LA": county_data.get_supported_counties("LA"),
-        "AR": county_data.get_supported_counties("AR"),
-        "MS": county_data.get_supported_counties("MS"),
-    }
+    portals = county_data.list_portals(state)
+    return {"portals": portals, "count": len(portals)}
+
+
+@router.get("/county-lookup")
+async def county_lookup(
+    state: str = Query(..., max_length=2),
+    county_parish: str = Query(..., max_length=100),
+):
+    """Return the public-record portal URL for a given LA parish or AR/MS
+    county. The agent clicks the URL and does the lookup manually — free,
+    no key, no fragile scraping. Returns the most specific assessor portal
+    when known, or the state-level umbrella as a fallback.
+
+    Defined ahead of `/{prospect_id}` so FastAPI doesn't treat the literal
+    string "county-lookup" as a prospect ID.
+    """
+    entry = county_data.find_portal(state, county_parish)
+    if entry is None:
+        return {
+            "found": False,
+            "state": state.upper(),
+            "county_or_parish": county_parish,
+            "message": "No portal on file for this jurisdiction. Add it to backend/app/services/county_data.py if you find one.",
+        }
+    return {"found": True, **entry}
 
 
 @router.get("/geo", response_model=list[ProspectGeoPoint])
@@ -727,32 +753,5 @@ async def batch_dnc_check(
     await db.commit()
 
     return {"checked": checked, "on_dnc_list": on_dnc, "skipped_no_phone": len(prospects) - checked}
-
-
-# ---------------------------------------------------------------------------
-# County Records Search — free supplementary data
-# ---------------------------------------------------------------------------
-
-@router.post("/search-county")
-async def search_county_records_endpoint(
-    state: str = Query(...),
-    county_parish: str = Query(...),
-    address: str | None = Query(None),
-    owner_name: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
-):
-    """Search free county/parish public record portals."""
-    results = county_data.search_county_records(
-        state=state,
-        county_parish=county_parish,
-        address=address,
-        owner_name=owner_name,
-    )
-
-    return {
-        "records": results,
-        "count": len(results),
-        "source": f"county_{state.lower()}_{county_parish.lower().replace(' ', '_')}",
-    }
 
 

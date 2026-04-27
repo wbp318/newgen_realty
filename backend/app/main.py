@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import properties, contacts, ai, activities, conversations, market_data, prospects, outreach
+from app.routers import properties, contacts, ai, activities, conversations, integrations, market_data, prospects, outreach
 from app.services import scheduler as drip_scheduler
 
 
@@ -42,6 +42,7 @@ app.include_router(conversations.router)
 app.include_router(market_data.router)
 app.include_router(prospects.router)
 app.include_router(outreach.router)
+app.include_router(integrations.router)
 
 
 @app.get("/api/health")
