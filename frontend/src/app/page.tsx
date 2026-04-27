@@ -95,109 +95,67 @@ export default function Dashboard() {
   }
 
   const statCards = [
-    { label: "Properties on file",  value: stats.properties,    folio: "01" },
-    { label: "Active listings",     value: stats.activeListings,folio: "02" },
-    { label: "Contacts on roll",    value: stats.contacts,      folio: "03" },
-    { label: "Open leads",          value: stats.leads,         folio: "04" },
+    { label: "Properties",        value: stats.properties        },
+    { label: "Active listings",   value: stats.activeListings    },
+    { label: "Contacts",          value: stats.contacts          },
+    { label: "Open leads",        value: stats.leads             },
   ];
 
   const formatMoney = (n: number) =>
     n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${n.toLocaleString()}`;
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
   return (
     <div className="max-w-[1400px] mx-auto">
-      {/* Editorial masthead */}
-      <header className="mb-12">
-        <div className="flex items-end justify-between mb-3">
-          <p className="stamp">Vol. I · Atlas of the Gulf South</p>
-          <p className="stamp-ink">{today}</p>
-        </div>
-        <h1 className="font-display text-7xl leading-[0.95] text-ink mb-4">
-          The Survey Desk
-        </h1>
-        <div className="flex items-end justify-between border-t border-ink/15 pt-3">
-          <p className="text-lg italic" style={{ color: "var(--ink-soft)" }}>
-            A daily account of land, leads, and outreach across Louisiana, Arkansas, and Mississippi.
-          </p>
-          <p className="font-mono text-xs tracking-wider" style={{ color: "var(--ink-faded)" }}>
-            FOLIO 01
-          </p>
-        </div>
+      {/* Header */}
+      <header className="mb-8">
+        <h1 className="font-display text-4xl text-text">Dashboard</h1>
+        <p className="mt-2 text-sm" style={{ color: "var(--text-soft)" }}>
+          AI-powered prospecting, CRM, and outreach for LA, AR, and MS.
+        </p>
       </header>
 
-      {/* Stats Row — four narrow cards + a wide portfolio ledger */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-10">
+      {/* Stats Row */}
+      <section className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {statCards.map((card) => (
-          <div key={card.label} className="panel panel-shadow corner-ornaments p-5 lg:col-span-1">
-            <span className="corner-tr" />
-            <span className="corner-bl" />
-            <p className="font-mono text-[0.65rem] tracking-widest uppercase mb-3" style={{ color: "var(--ink-faded)" }}>
-              {card.folio}
-            </p>
-            <p className="font-display text-5xl leading-none text-ink">
-              {card.value}
-            </p>
-            <p className="mt-3 text-sm" style={{ color: "var(--ink-soft)" }}>
-              {card.label}
-            </p>
+          <div key={card.label} className="panel p-5">
+            <p className="text-3xl font-medium text-text">{card.value}</p>
+            <p className="mt-2 text-xs" style={{ color: "var(--text-soft)" }}>{card.label}</p>
           </div>
         ))}
-        <div
-          className="panel panel-shadow corner-ornaments p-5 lg:col-span-2 relative overflow-hidden"
-          style={{ background: "var(--ink)", color: "var(--parchment)", borderColor: "var(--ink)" }}
-        >
-          <span className="corner-tr" style={{ borderColor: "var(--parchment-edge)", opacity: 0.4 }} />
-          <span className="corner-bl" style={{ borderColor: "var(--parchment-edge)", opacity: 0.4 }} />
-          <p className="font-mono text-[0.65rem] tracking-widest uppercase mb-3" style={{ color: "var(--kraft)" }}>
-            Ledger · 05
+        <div className="panel p-5">
+          <p className="text-3xl font-medium" style={{ color: "var(--accent)" }}>
+            {formatMoney(stats.portfolioValue)}
           </p>
-          <p className="font-display text-5xl leading-none">
-            <span style={{ color: "var(--oxblood)" }}>$</span>
-            {stats.portfolioValue >= 1_000_000
-              ? `${(stats.portfolioValue / 1_000_000).toFixed(2)}M`
-              : stats.portfolioValue.toLocaleString()}
-          </p>
-          <p className="mt-3 text-sm" style={{ color: "var(--kraft)" }}>
-            Portfolio value at asking
-          </p>
+          <p className="mt-2 text-xs" style={{ color: "var(--text-soft)" }}>Portfolio value</p>
         </div>
       </section>
 
       {/* AI Insights */}
-      <section className="panel panel-shadow corner-ornaments p-7 mb-10 relative">
-        <span className="corner-tr" />
-        <span className="corner-bl" />
-        <div className="flex justify-between items-start mb-5">
+      <section className="panel p-6 mb-8">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="stamp mb-1">Field Notes</p>
-            <h2 className="font-display text-3xl text-ink">From the Cartographer&apos;s Desk</h2>
+            <h2 className="font-display text-2xl text-text">AI Insights</h2>
+            <p className="mt-1 text-xs" style={{ color: "var(--text-soft)" }}>
+              Analysis of your portfolio and pipeline.
+            </p>
           </div>
-          <button onClick={handleGetInsights} disabled={loadingInsights} className="btn-ink">
-            {loadingInsights ? "Surveying…" : insights ? "Resurvey" : "Compile Notes"}
+          <button onClick={handleGetInsights} disabled={loadingInsights} className="btn-primary">
+            {loadingInsights ? "Analyzing…" : insights ? "Refresh" : "Generate"}
           </button>
         </div>
         {insights ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
             {[
-              { title: "Observations",    items: insights.insights,      mark: "✣", color: "var(--ink)" },
-              { title: "Action Items",    items: insights.actions,        mark: "❀", color: "var(--oxblood)" },
-              { title: "Opportunities",   items: insights.opportunities, mark: "✤", color: "var(--survey-green)" },
+              { title: "Observations",  items: insights.insights,      color: "var(--info)" },
+              { title: "Action items",  items: insights.actions,        color: "var(--accent)" },
+              { title: "Opportunities", items: insights.opportunities, color: "var(--warm)" },
             ].map((col) => (
               <div key={col.title}>
-                <p className="font-mono text-[0.65rem] tracking-widest uppercase mb-3" style={{ color: col.color }}>
-                  {col.title}
-                </p>
+                <p className="text-xs font-medium mb-3" style={{ color: col.color }}>{col.title}</p>
                 <ul className="space-y-2">
                   {col.items.map((item, i) => (
-                    <li key={i} className="flex gap-3 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
-                      <span style={{ color: col.color }} className="flex-shrink-0">{col.mark}</span>
+                    <li key={i} className="flex gap-2 text-sm leading-relaxed" style={{ color: "var(--text-soft)" }}>
+                      <span style={{ color: col.color }} className="flex-shrink-0">•</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -206,47 +164,40 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
-            Press <span className="font-mono not-italic">Compile Notes</span> for an AI-drawn survey of your portfolio, leads, and outstanding action.
+          <p className="text-sm" style={{ color: "var(--text-faded)" }}>
+            Click <span className="font-medium">Generate</span> for an AI-powered analysis.
           </p>
         )}
       </section>
 
-      {/* Prospect Pipeline — stylized as a depth-of-field gauge */}
+      {/* Pipeline */}
       {Object.keys(prospectStats).length > 0 && (
-        <section className="panel panel-shadow corner-ornaments p-7 mb-10 relative">
-          <span className="corner-tr" />
-          <span className="corner-bl" />
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <p className="stamp mb-1">Sounding Line</p>
-              <h2 className="font-display text-3xl text-ink">Prospect Pipeline</h2>
-            </div>
-            <Link href="/prospects" className="btn-ghost">View Roll</Link>
+        <section className="panel p-6 mb-8">
+          <div className="flex justify-between items-start mb-5">
+            <h2 className="font-display text-2xl text-text">Prospect Pipeline</h2>
+            <Link href="/prospects" className="link text-sm">View all →</Link>
           </div>
           <div className="grid grid-cols-6 gap-3">
             {[
-              { key: "new",         label: "New",         color: "var(--slate-blue)" },
-              { key: "researching", label: "Researching", color: "var(--gold)" },
-              { key: "qualified",   label: "Qualified",   color: "var(--oxblood)" },
-              { key: "contacted",   label: "Contacted",   color: "var(--survey-green)" },
-              { key: "responding",  label: "Responding",  color: "var(--survey-green-soft)" },
-              { key: "converted",   label: "Converted",   color: "var(--ink)" },
+              { key: "new",         label: "New",         color: "var(--info)" },
+              { key: "researching", label: "Researching", color: "var(--purple)" },
+              { key: "qualified",   label: "Qualified",   color: "var(--warm)" },
+              { key: "contacted",   label: "Contacted",   color: "var(--accent)" },
+              { key: "responding",  label: "Responding",  color: "var(--accent-soft)" },
+              { key: "converted",   label: "Converted",   color: "var(--cool)" },
             ].map((stage) => {
               const count = prospectStats[stage.key] || 0;
               const total = Object.values(prospectStats).reduce((a, b) => a + b, 0);
               const pct = total > 0 ? (count / total) * 100 : 0;
               return (
-                <div key={stage.key} className="flex flex-col items-center text-center">
-                  <p className="font-display text-4xl text-ink leading-none">{count}</p>
-                  <p className="font-mono text-[0.65rem] tracking-widest uppercase mt-2 mb-3" style={{ color: "var(--ink-faded)" }}>
-                    {stage.label}
-                  </p>
-                  <div className="w-full h-1.5 relative" style={{ background: "var(--parchment)" }}>
+                <div key={stage.key}>
+                  <p className="text-2xl font-medium text-text leading-none">{count}</p>
+                  <p className="text-xs mt-1.5 mb-2" style={{ color: "var(--text-soft)" }}>{stage.label}</p>
+                  <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
                     <div
-                      className="absolute inset-y-0 left-0"
+                      className="h-1 rounded-full"
                       style={{
-                        width: `${Math.max(pct, count > 0 ? 8 : 0)}%`,
+                        width: `${Math.max(pct, count > 0 ? 6 : 0)}%`,
                         background: stage.color,
                       }}
                     />
@@ -258,9 +209,9 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* Three-up: Top Prospects · Campaigns · Hot Leads */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <Panel title="Top Prospects" eyebrow="Plat Book" link={{ href: "/prospects/search", label: "Search" }}>
+      {/* 3-up: Top Prospects · Campaigns · Hot Leads */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Panel title="Top Prospects" link={{ href: "/prospects/search", label: "Search" }}>
           {topProspects.length > 0 ? (
             <ul className="space-y-3">
               {topProspects.map((p) => {
@@ -271,73 +222,64 @@ export default function Dashboard() {
                 };
                 const score = p.ai_prospect_score || 0;
                 const scoreColor =
-                  score >= 80 ? "var(--oxblood)" :
-                  score >= 60 ? "var(--gold)" :
-                  score >= 40 ? "var(--slate-blue)" :
-                  "var(--ink-faded)";
+                  score >= 80 ? "var(--hot)" :
+                  score >= 60 ? "var(--warm)" :
+                  score >= 40 ? "var(--cool)" :
+                  "var(--text-faded)";
                 return (
                   <li key={p.id}>
-                    <Link href={`/prospects/${p.id}`} className="block group py-2 px-3 -mx-3 transition-colors hover:bg-[var(--parchment)]">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="font-display text-base text-ink truncate">
-                          {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown owner"}
+                    <Link href={`/prospects/${p.id}`} className="block py-1.5 px-2 -mx-2 rounded transition-colors hover:bg-white/[0.03]">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-text truncate">
+                          {p.first_name || p.last_name ? `${p.first_name || ""} ${p.last_name || ""}`.trim() : "Unknown"}
                         </p>
-                        <span className="font-mono text-sm" style={{ color: scoreColor }}>
-                          {Math.round(score).toString().padStart(2, "0")}
+                        <span className="text-sm font-medium" style={{ color: scoreColor }}>
+                          {Math.round(score)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
-                        <span>{typeLabels[p.prospect_type] || p.prospect_type}</span>
-                        <span>·</span>
-                        <span className="truncate">{p.property_city}, {p.property_state}</span>
-                      </div>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-faded)" }}>
+                        {typeLabels[p.prospect_type] || p.prospect_type} · {p.property_city}, {p.property_state}
+                      </p>
                     </Link>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
-              Score prospects to populate this register.
-            </p>
+            <p className="text-sm" style={{ color: "var(--text-faded)" }}>Score prospects to see them here.</p>
           )}
         </Panel>
 
-        <Panel title="Campaigns" eyebrow="Dispatch" link={{ href: "/outreach", label: "View all" }}>
+        <Panel title="Active Campaigns" link={{ href: "/outreach", label: "View all" }}>
           {activeCampaigns.length > 0 ? (
             <ul className="space-y-3">
               {activeCampaigns.map((c) => (
                 <li key={c.id}>
-                  <Link href={`/outreach/${c.id}`} className="block group py-2 px-3 -mx-3 transition-colors hover:bg-[var(--parchment)]">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="font-display text-base text-ink truncate">{c.name}</p>
+                  <Link href={`/outreach/${c.id}`} className="block py-1.5 px-2 -mx-2 rounded transition-colors hover:bg-white/[0.03]">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-text truncate">{c.name}</p>
                       <span
-                        className="tag"
+                        className="tag text-[0.65rem]"
                         style={{
-                          color: c.status === "active" ? "var(--survey-green)" : "var(--ink-faded)",
+                          color: c.status === "active" ? "var(--accent)" : "var(--text-faded)",
+                          borderColor: c.status === "active" ? "var(--accent-deep)" : "var(--border)",
                         }}
                       >
                         {c.status}
                       </span>
                     </div>
-                    <div className="flex gap-3 text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
+                    <div className="flex gap-3 text-xs" style={{ color: "var(--text-faded)" }}>
                       <span>{c.total_messages} msgs</span>
-                      <span>·</span>
                       <span>{c.sent_count} sent</span>
-                      {c.replied_count > 0 && (
-                        <>
-                          <span>·</span>
-                          <span style={{ color: "var(--oxblood)" }}>{c.replied_count} replies</span>
-                        </>
-                      )}
+                      {c.replied_count > 0 && <span style={{ color: "var(--accent)" }}>{c.replied_count} replies</span>}
                     </div>
                     {c.total_messages > 0 && (
-                      <div className="mt-2 h-px relative" style={{ background: "var(--parchment-edge)" }}>
+                      <div className="mt-2 h-0.5 rounded-full" style={{ background: "var(--border)" }}>
                         <div
-                          className="absolute inset-y-0 left-0 -top-px h-0.5"
+                          className="h-0.5 rounded-full"
                           style={{
                             width: `${Math.min((c.sent_count / c.total_messages) * 100, 100)}%`,
-                            background: "var(--oxblood)",
+                            background: "var(--accent)",
                           }}
                         />
                       </div>
@@ -347,100 +289,88 @@ export default function Dashboard() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
-              <Link href="/outreach" className="link not-italic">Open a campaign</Link> to begin dispatch.
+            <p className="text-sm" style={{ color: "var(--text-faded)" }}>
+              <Link href="/outreach" className="link">Create a campaign</Link> to start outreach.
             </p>
           )}
         </Panel>
 
-        <Panel title="Hot Leads" eyebrow="Day Book">
+        <Panel title="Hot Leads">
           {hotLeads.length > 0 ? (
             <ul className="space-y-3">
               {hotLeads.map((c) => {
                 const score = c.ai_lead_score || 0;
                 const scoreColor =
-                  score >= 80 ? "var(--oxblood)" :
-                  score >= 60 ? "var(--gold)" :
-                  "var(--ink-faded)";
+                  score >= 80 ? "var(--hot)" :
+                  score >= 60 ? "var(--warm)" :
+                  "var(--text-faded)";
                 return (
                   <li key={c.id}>
-                    <Link href={`/contacts/${c.id}`} className="block group py-2 px-3 -mx-3 transition-colors hover:bg-[var(--parchment)]">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="font-display text-base text-ink">
+                    <Link href={`/contacts/${c.id}`} className="block py-1.5 px-2 -mx-2 rounded transition-colors hover:bg-white/[0.03]">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-text">
                           {c.first_name} {c.last_name}
                         </p>
-                        <span className="font-mono text-sm" style={{ color: scoreColor }}>
-                          {Math.round(score).toString().padStart(2, "0")}
+                        <span className="text-sm font-medium" style={{ color: scoreColor }}>
+                          {Math.round(score)}
                         </span>
                       </div>
-                      <div className="text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
-                        {c.preferred_parishes?.slice(0, 2).join(" · ") || "No parish/county pref"}
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-faded)" }}>
+                        {c.preferred_parishes?.slice(0, 2).join(", ") || "No parish/county pref"}
                         {c.budget_max ? ` · up to ${formatMoney(c.budget_max)}` : ""}
-                      </div>
+                      </p>
                     </Link>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
-              No hot leads yet. Score contacts to populate this column.
-            </p>
+            <p className="text-sm" style={{ color: "var(--text-faded)" }}>Score contacts to see hot leads.</p>
           )}
         </Panel>
       </section>
 
       {/* Recent Activity */}
-      <section className="mb-10">
-        <Panel title="Day Book" eyebrow="Logged Entries">
-          {recentActivity.length > 0 ? (
-            <ul className="divide-y" style={{ borderColor: "var(--parchment-edge)" }}>
-              {recentActivity.map((a) => (
-                <li key={a.id} className="py-3 first:pt-0 last:pb-0 flex items-baseline gap-4">
-                  <span className="font-mono text-[0.7rem] tracking-widest uppercase whitespace-nowrap" style={{ color: "var(--ink-faded)" }}>
-                    {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
-                    {" · "}
-                    {new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                  <span className="font-mono text-[0.7rem] tracking-widest uppercase" style={{ color: "var(--oxblood)" }}>
-                    {a.activity_type.replace("_", " ")}
-                  </span>
-                  <span className="text-sm flex-1" style={{ color: "var(--ink)" }}>{a.title}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm italic" style={{ color: "var(--ink-faded)" }}>
-              No entries yet. Activity will be logged here as you work.
-            </p>
-          )}
-        </Panel>
+      <section className="panel p-6 mb-8">
+        <h2 className="font-display text-2xl text-text mb-4">Recent Activity</h2>
+        {recentActivity.length > 0 ? (
+          <ul className="divide-y" style={{ borderColor: "var(--border-soft)" }}>
+            {recentActivity.map((a) => (
+              <li key={a.id} className="py-3 first:pt-0 last:pb-0 flex items-baseline gap-4">
+                <span className="text-xs whitespace-nowrap" style={{ color: "var(--text-faded)" }}>
+                  {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
+                  {" · "}
+                  {new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span className="text-xs uppercase tracking-wide" style={{ color: "var(--accent)" }}>
+                  {a.activity_type.replace("_", " ")}
+                </span>
+                <span className="text-sm flex-1 text-text">{a.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--text-faded)" }}>No recent activity yet.</p>
+        )}
       </section>
 
-      {/* Quick Actions — three big plates */}
-      <section className="mb-6">
-        <div className="rule-fleuron mb-6"><span>✦</span></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <ActionPlate
-            href="/prospects/search"
-            stamp="Survey"
-            title="Find Prospects"
-            description="Search ATTOM public records for motivated sellers — absentee owners, pre-foreclosures, probate, and tax-delinquent."
-          />
-          <ActionPlate
-            href="/ai"
-            stamp="Atelier"
-            title="Open the AI Assistant"
-            description="Generate listings, analyze comps, and draft communications with a Gulf-South-aware AI."
-            accent
-          />
-          <ActionPlate
-            href="/properties/new"
-            stamp="Register"
-            title="Add a Property"
-            description="Record a new property to the atlas. AI helps draft listings and suggests pricing."
-          />
-        </div>
+      {/* Quick Actions */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <ActionPlate
+          href="/prospects/search"
+          title="Find Prospects"
+          description="Search ATTOM for absentee owners, pre-foreclosures, probate, and tax-delinquent."
+        />
+        <ActionPlate
+          href="/ai"
+          title="AI Assistant"
+          description="Generate listings, analyze comps, and draft communications."
+        />
+        <ActionPlate
+          href="/properties/new"
+          title="Add a Property"
+          description="Record a new listing. AI helps draft and price it."
+        />
       </section>
     </div>
   );
@@ -448,26 +378,19 @@ export default function Dashboard() {
 
 function Panel({
   title,
-  eyebrow,
   link,
   children,
 }: {
   title: string;
-  eyebrow: string;
   link?: { href: string; label: string };
   children: React.ReactNode;
 }) {
   return (
-    <div className="panel panel-shadow corner-ornaments p-6 relative">
-      <span className="corner-tr" />
-      <span className="corner-bl" />
+    <div className="panel p-5">
       <div className="flex items-baseline justify-between mb-4">
-        <div>
-          <p className="stamp mb-1">{eyebrow}</p>
-          <h3 className="font-display text-2xl text-ink">{title}</h3>
-        </div>
+        <h3 className="font-display text-lg text-text">{title}</h3>
         {link && (
-          <Link href={link.href} className="font-mono text-[0.7rem] tracking-widest uppercase hover:underline" style={{ color: "var(--oxblood)" }}>
+          <Link href={link.href} className="link text-xs">
             {link.label} →
           </Link>
         )}
@@ -479,43 +402,20 @@ function Panel({
 
 function ActionPlate({
   href,
-  stamp,
   title,
   description,
-  accent = false,
 }: {
   href: string;
-  stamp: string;
   title: string;
   description: string;
-  accent?: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className="panel panel-shadow corner-ornaments p-7 block transition-all hover:-translate-y-0.5 relative group"
-      style={
-        accent
-          ? { background: "var(--ink)", color: "var(--parchment)", borderColor: "var(--ink)" }
-          : undefined
-      }
-    >
-      <span className="corner-tr" style={accent ? { borderColor: "var(--parchment-edge)", opacity: 0.4 } : undefined} />
-      <span className="corner-bl" style={accent ? { borderColor: "var(--parchment-edge)", opacity: 0.4 } : undefined} />
-      <p className={accent ? "font-mono text-[0.65rem] tracking-widest uppercase mb-3" : "stamp mb-3"}
-         style={accent ? { color: "var(--oxblood)" } : undefined}>
-        {stamp}
-      </p>
-      <h3 className="font-display text-2xl mb-2 leading-tight"
-          style={accent ? { color: "var(--parchment)" } : { color: "var(--ink)" }}>
-        {title}
-      </h3>
-      <p className="text-sm leading-relaxed"
-         style={accent ? { color: "var(--kraft)" } : { color: "var(--ink-soft)" }}>
+    <Link href={href} className="panel panel-hover p-6 block transition-all group">
+      <h3 className="font-display text-xl text-text mb-2">{title}</h3>
+      <p className="text-sm leading-relaxed" style={{ color: "var(--text-soft)" }}>
         {description}
       </p>
-      <span className="mt-4 inline-block font-mono text-[0.7rem] tracking-widest uppercase group-hover:translate-x-1 transition-transform"
-            style={accent ? { color: "var(--oxblood)" } : { color: "var(--oxblood)" }}>
+      <span className="mt-3 inline-block text-sm group-hover:translate-x-0.5 transition-transform" style={{ color: "var(--accent)" }}>
         Open →
       </span>
     </Link>

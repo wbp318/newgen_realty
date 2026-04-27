@@ -49,21 +49,19 @@ const BASEMAPS: Record<
 };
 
 function scoreColor(score: number | null): string {
-  // Cartographer palette — matches /map legend
-  if (score == null) return "#3c5871";   // slate-blue
-  if (score >= 80)   return "#b04428";   // oxblood
-  if (score >= 60)   return "#b8893d";   // gold
-  if (score >= 40)   return "#caa033";   // ochre
-  return "#3c5871";                      // slate-blue
+  if (score == null) return "#3b82f6"; // blue
+  if (score >= 80)   return "#dc2626"; // red
+  if (score >= 60)   return "#f59e0b"; // amber
+  if (score >= 40)   return "#eab308"; // yellow
+  return "#3b82f6";                    // blue
 }
 
 function propertyStatusColor(status: string): string {
   switch (status) {
-    case "active":   return "#38563f";  // survey-green
-    case "pending":  return "#3c5871";  // slate-blue
-    case "sold":     return "#7c3aed";  // purple
-    case "withdrawn":return "#8a7e63";  // ink-faded sepia
-    default:         return "#8a7e63";  // draft / unknown
+    case "active":   return "#10b981"; // emerald
+    case "pending":  return "#3b82f6"; // blue
+    case "sold":     return "#7c3aed"; // purple
+    default:         return "#9ca3af"; // gray (draft/withdrawn/unknown)
   }
 }
 
@@ -240,7 +238,7 @@ function ParishOverlay({ data, selected, onSelect, basemap }: ParishOverlayProps
   const key = `${basemap}-${data?.features.length ?? 0}`;
   if (!data) return null;
 
-  const lineColor = basemap === "satellite" ? "#f3e8d0" : "#1a2330"; // parchment / ink
+  const lineColor = basemap === "satellite" ? "#ffffff" : "#1f2937";
 
   return (
     <GeoJSON
@@ -256,9 +254,9 @@ function ParishOverlay({ data, selected, onSelect, basemap }: ParishOverlayProps
         return {
           color: lineColor,
           weight: isSelected ? 2.5 : 0.8,
-          opacity: isSelected ? 0.9 : 0.55,
-          fillColor: isSelected ? "#b04428" : "#000000", // oxblood when selected
-          fillOpacity: isSelected ? 0.16 : 0.0,
+          opacity: isSelected ? 0.9 : 0.5,
+          fillColor: isSelected ? "#10b981" : "#000000", // emerald when selected
+          fillOpacity: isSelected ? 0.18 : 0.0,
         };
       }}
       onEachFeature={(feat: Feature<Geometry, ParishProps>, layer) => {
@@ -383,10 +381,10 @@ export default function ProspectMap({
             center={[p.latitude, p.longitude]}
             radius={p.ai_prospect_score != null && p.ai_prospect_score >= 80 ? 12 : 9}
             pathOptions={{
-              color: "#f3e8d0",
+              color: "#ffffff",
               fillColor: scoreColor(p.ai_prospect_score),
-              fillOpacity: 0.92,
-              weight: 1.5,
+              fillOpacity: 0.9,
+              weight: 2,
             }}
           >
             <Popup>

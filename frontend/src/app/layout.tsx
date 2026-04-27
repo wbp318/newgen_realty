@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display, Newsreader, JetBrains_Mono } from "next/font/google";
+import { DM_Serif_Display, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 
@@ -10,9 +10,8 @@ const display = DM_Serif_Display({
   display: "swap",
 });
 
-const body = Newsreader({
-  variable: "--font-body",
-  weight: ["300", "400", "500", "600"],
+const sans = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -25,7 +24,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NewGen Realty — Office of the Cartographer",
+  title: "NewGen Realty",
   description: "AI-powered real estate platform for Louisiana, Arkansas, and Mississippi",
 };
 
@@ -36,12 +35,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${display.variable} ${body.variable} ${mono.variable} antialiased font-body`}
-      >
-        <div className="flex min-h-screen bg-parchment text-ink">
+      <body className={`${display.variable} ${sans.variable} ${mono.variable} antialiased`}>
+        <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 px-10 py-10 paper-grain">{children}</main>
+          <main className="flex-1 px-8 py-8">{children}</main>
         </div>
       </body>
     </html>

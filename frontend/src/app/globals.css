@@ -1,45 +1,61 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Cartographer's Office — palette, type, textures
+   Calm dark theme. One design move: a serif page title against
+   a refined slate UI. No textures, no ornaments, no themed naming.
    ============================================================ */
 
 :root {
-  /* Palette */
-  --parchment:        #f3e8d0;  /* page background, aged paper */
-  --parchment-deep:   #ebdcb9;  /* card / panel background */
-  --parchment-edge:   #d9c79b;  /* hairline rules, panel edges */
-  --ink:              #1a2330;  /* primary text, deep navy ink */
-  --ink-soft:         #4a5365;  /* secondary text */
-  --ink-faded:        #8a7e63;  /* muted, sepia-leaning */
-  --oxblood:          #b04428;  /* primary accent — copper / hot lead */
-  --oxblood-deep:     #8a341e;  /* hover / pressed */
-  --survey-green:     #38563f;  /* "active" state, properties */
-  --survey-green-soft:#5a7a60;
-  --gold:             #b8893d;  /* warnings, in-progress */
-  --slate-blue:       #3c5871;  /* secondary, info */
-  --kraft:            #c9b48a;  /* tertiary surface */
+  /* Surfaces */
+  --bg:           #0e1117;   /* page background */
+  --bg-elevated:  #161a23;   /* cards, panels */
+  --bg-sidebar:   #11151d;   /* sidebar (slightly darker than bg) */
+  --bg-input:     #1a1f2a;   /* inputs, fields */
+
+  /* Borders */
+  --border:       #262c39;   /* hairlines, dividers */
+  --border-soft:  #1f242f;   /* subtler dividers */
+
+  /* Text */
+  --text:         #e6e8ed;   /* primary */
+  --text-soft:    #9ba1b0;   /* secondary */
+  --text-faded:   #6b7180;   /* tertiary */
+
+  /* Accent — emerald, like the first design */
+  --accent:       #10b981;
+  --accent-soft:  #34d399;
+  --accent-deep:  #047857;
+
+  /* Status */
+  --hot:          #f87171;
+  --warm:         #fbbf24;
+  --cool:         #38bdf8;
+  --info:         #60a5fa;
+  --purple:       #a78bfa;
 }
 
 @theme inline {
-  --color-background: var(--parchment);
-  --color-foreground: var(--ink);
-  --color-parchment:        var(--parchment);
-  --color-parchment-deep:   var(--parchment-deep);
-  --color-parchment-edge:   var(--parchment-edge);
-  --color-ink:              var(--ink);
-  --color-ink-soft:         var(--ink-soft);
-  --color-ink-faded:        var(--ink-faded);
-  --color-oxblood:          var(--oxblood);
-  --color-oxblood-deep:     var(--oxblood-deep);
-  --color-survey-green:     var(--survey-green);
-  --color-survey-green-soft:var(--survey-green-soft);
-  --color-gold:             var(--gold);
-  --color-slate-blue:       var(--slate-blue);
-  --color-kraft:            var(--kraft);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+
+  --color-bg:           var(--bg);
+  --color-bg-elevated:  var(--bg-elevated);
+  --color-bg-sidebar:   var(--bg-sidebar);
+  --color-bg-input:     var(--bg-input);
+  --color-border:       var(--border);
+  --color-border-soft:  var(--border-soft);
+  --color-text:         var(--text);
+  --color-text-soft:    var(--text-soft);
+  --color-text-faded:   var(--text-faded);
+  --color-accent:       var(--accent);
+  --color-accent-soft:  var(--accent-soft);
+  --color-accent-deep:  var(--accent-deep);
+  --color-hot:          var(--hot);
+  --color-warm:         var(--warm);
+  --color-cool:         var(--cool);
 
   --font-display: var(--font-display);
-  --font-body:    var(--font-body);
+  --font-sans:    var(--font-sans);
   --font-mono:    var(--font-mono);
 }
 
@@ -48,208 +64,133 @@
    ============================================================ */
 
 body {
-  background: var(--parchment);
-  color: var(--ink);
-  font-family: var(--font-body), Georgia, serif;
-  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.font-display { font-family: var(--font-display), Georgia, serif; letter-spacing: -0.01em; }
-.font-body    { font-family: var(--font-body), Georgia, serif; }
+.font-display { font-family: var(--font-display), Georgia, serif; letter-spacing: -0.02em; }
+.font-sans    { font-family: var(--font-sans), -apple-system, sans-serif; }
 .font-mono    { font-family: var(--font-mono), ui-monospace, monospace; }
 
 /* ============================================================
-   Textures — paper grain + topographic contours, both inline SVG
-   so no asset pipeline is needed.
+   Component primitives — minimal set
    ============================================================ */
 
-.paper-grain {
-  background-image:
-    radial-gradient(rgba(70, 50, 20, 0.05) 1px, transparent 1px),
-    radial-gradient(rgba(70, 50, 20, 0.04) 1px, transparent 1px);
-  background-size: 4px 4px, 11px 11px;
-  background-position: 0 0, 2px 5px;
-}
-
-.paper-grain-soft {
-  background-image: radial-gradient(rgba(70, 50, 20, 0.035) 1px, transparent 1px);
-  background-size: 5px 5px;
-}
-
-.topo-bg {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'><g fill='none' stroke='%23b04428' stroke-width='0.6' opacity='0.10'><circle cx='120' cy='120' r='30'/><circle cx='120' cy='120' r='55'/><circle cx='120' cy='120' r='80'/><circle cx='120' cy='120' r='105'/><circle cx='120' cy='120' r='130'/></g></svg>");
-  background-size: 240px 240px;
-  background-repeat: repeat;
-}
-
-/* ============================================================
-   Cartographic primitives
-   ============================================================ */
-
-/* Decorative hairline rule with a fleuron in the middle.
-   Use as: <div class="rule-fleuron"><span>✦</span></div>
-*/
-.rule-fleuron {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: var(--ink-faded);
-}
-.rule-fleuron::before,
-.rule-fleuron::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--parchment-edge), transparent);
-}
-.rule-fleuron > span {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1rem;
-  letter-spacing: 0.3em;
-}
-
-/* Corner ornaments — apply to a relatively-positioned panel */
-.corner-ornaments::before,
-.corner-ornaments::after,
-.corner-ornaments > .corner-tl,
-.corner-ornaments > .corner-tr {
-  content: "";
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: var(--parchment-edge);
-  pointer-events: none;
-}
-.corner-ornaments::before { top: 6px; left: 6px;  border-top: 1px solid; border-left: 1px solid; }
-.corner-ornaments::after  { bottom: 6px; right: 6px; border-bottom: 1px solid; border-right: 1px solid; }
-.corner-ornaments > .corner-tr { top: 6px; right: 6px; border-top: 1px solid; border-right: 1px solid; }
-.corner-ornaments > .corner-bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
-
-/* Survey panel — the standard parchment card */
+/* Card / panel */
 .panel {
-  background: var(--parchment-deep);
-  border: 1px solid var(--parchment-edge);
-  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 
-.panel-shadow {
-  box-shadow:
-    0 1px 0 rgba(255, 250, 235, 0.7) inset,
-    0 1px 1px rgba(60, 35, 10, 0.04),
-    0 8px 24px -16px rgba(60, 35, 10, 0.18);
-}
-
-/* "Stamp" — small uppercase oxblood eyebrow text */
-.stamp {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--oxblood);
-  font-weight: 500;
-}
-.stamp-ink {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  font-weight: 500;
-}
-
-/* Leader-dot row — used in TOC nav */
-.toc-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-.toc-row > .toc-leader {
-  flex: 1;
-  border-bottom: 1px dotted var(--parchment-edge);
-  transform: translateY(-3px);
+.panel-hover:hover {
+  border-color: var(--border);
+  background: #1a1f2a;
 }
 
 /* Buttons */
-.btn-ink {
-  background: var(--ink);
-  color: var(--parchment);
-  border: 1px solid var(--ink);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+.btn-primary {
+  background: var(--accent);
+  color: #04231a;
+  border: 1px solid var(--accent);
   padding: 0.55rem 1.1rem;
-  transition: background 120ms ease;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: background 120ms ease, border-color 120ms ease;
 }
-.btn-ink:hover { background: var(--oxblood); border-color: var(--oxblood); }
-.btn-ink:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-ink:disabled:hover { background: var(--ink); border-color: var(--ink); }
+.btn-primary:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary:disabled:hover { background: var(--accent); border-color: var(--accent); }
 
 .btn-ghost {
   background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--parchment-edge);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 0.5rem 1rem;
-  transition: all 120ms ease;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: border-color 120ms ease, background 120ms ease;
 }
-.btn-ghost:hover { border-color: var(--ink); }
+.btn-ghost:hover { border-color: var(--text-soft); background: rgba(255, 255, 255, 0.02); }
 .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Inputs */
+/* Form fields */
 .field {
-  background: rgba(255, 250, 235, 0.5);
-  border: 1px solid var(--parchment-edge);
-  color: var(--ink);
-  font-family: var(--font-body), Georgia, serif;
-  padding: 0.5rem 0.7rem;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
   transition: border-color 120ms ease;
 }
 .field:focus {
   outline: none;
-  border-color: var(--ink);
-  background: rgba(255, 250, 235, 0.85);
+  border-color: var(--accent);
 }
-.field::placeholder { color: var(--ink-faded); }
+.field::placeholder { color: var(--text-faded); }
 
-/* Pill tags styled as wax-stamp chips */
+/* Tag / pill */
 .tag {
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-mono), monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 0.18rem 0.5rem;
-  border: 1px solid currentColor;
-  background: transparent;
-  border-radius: 0;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
 }
 
 /* Subtle link */
 a.link, .link {
-  color: var(--oxblood);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 120ms ease;
 }
-a.link:hover, .link:hover { color: var(--oxblood-deep); }
+a.link:hover, .link:hover { border-color: var(--accent); }
 
-/* Reset Leaflet popup so it matches the theme */
+/* Hairline rule */
+.hairline { height: 1px; background: var(--border); }
+
+/* ============================================================
+   Leaflet popup theme — dark slate matching the UI
+   ============================================================ */
+
 .leaflet-popup-content-wrapper {
-  background: var(--parchment-deep) !important;
-  color: var(--ink) !important;
-  border: 1px solid var(--parchment-edge) !important;
-  border-radius: 0 !important;
-  box-shadow: 0 4px 16px -8px rgba(60, 35, 10, 0.25) !important;
+  background: var(--bg-elevated) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
 }
 .leaflet-popup-tip {
-  background: var(--parchment-deep) !important;
-  border: 1px solid var(--parchment-edge) !important;
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border) !important;
 }
 .leaflet-container {
-  font-family: var(--font-body), Georgia, serif !important;
+  font-family: var(--font-sans), sans-serif !important;
 }
+.leaflet-popup-content a {
+  color: var(--accent) !important;
+}
+
+/* ============================================================
+   Scrollbar — subtle dark
+   ============================================================ */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-faded); }

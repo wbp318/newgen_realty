@@ -12,8 +12,8 @@ import type { ProspectGeoPoint, PropertyGeoPoint } from "@/lib/types";
 const ProspectMap = dynamic(() => import("@/components/map/ProspectMap"), {
   ssr: false,
   loading: () => (
-    <div className="h-full w-full flex items-center justify-center text-sm italic" style={{ color: "var(--ink-faded)" }}>
-      Surveying terrain…
+    <div className="h-full w-full flex items-center justify-center text-sm" style={{ color: "var(--text-faded)" }}>
+      Loading map…
     </div>
   ),
 });
@@ -49,8 +49,6 @@ export default function FarmMapPage() {
   const [displayDims, setDisplayDims] = useState<{ w: number; h: number }>({ w: 0, h: 720 });
   const mapWrapRef = useRef<HTMLDivElement | null>(null);
 
-  // Watch the map container for any size change (corner drag, window resize)
-  // and surface the current dimensions for display.
   useEffect(() => {
     const el = mapWrapRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -147,36 +145,23 @@ export default function FarmMapPage() {
     : null;
 
   return (
-    <div className="max-w-[1400px] mx-auto flex flex-col min-h-[calc(100vh-5rem)]">
-      {/* Masthead */}
-      <header className="mb-6">
-        <div className="flex items-end justify-between mb-3">
-          <p className="stamp">Sheet II · Farm Map</p>
-          <p className="stamp-ink">Scale 1:varied · WGS84</p>
+    <div className="max-w-[1400px] mx-auto">
+      {/* Header */}
+      <header className="mb-6 flex items-end justify-between gap-6">
+        <div>
+          <h1 className="font-display text-4xl text-text">Farm Map</h1>
+          <p className="mt-1.5 text-sm" style={{ color: "var(--text-soft)" }}>
+            Prospects and properties across LA, AR, and MS. Click a parish or county to filter.
+          </p>
         </div>
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <h1 className="font-display text-6xl leading-[0.95] text-ink">
-              Plat of Operations
-            </h1>
-            <p className="mt-3 text-base italic max-w-2xl" style={{ color: "var(--ink-soft)" }}>
-              Prospects, properties, and parish lines as they sit across the Gulf South.
-              Click a parish or county to scope the survey.
-            </p>
-          </div>
-          <button onClick={handleBackfill} disabled={backfilling} className="btn-ghost whitespace-nowrap">
-            {backfilling ? "Geocoding…" : "Geocode Missing"}
-          </button>
-        </div>
-        <div className="border-t border-ink/15 mt-4" />
+        <button onClick={handleBackfill} disabled={backfilling} className="btn-ghost whitespace-nowrap">
+          {backfilling ? "Geocoding…" : "Geocode missing"}
+        </button>
       </header>
 
-      {/* Survey form — filter strip */}
-      <section className="panel panel-shadow corner-ornaments p-5 mb-4 relative">
-        <span className="corner-tr" />
-        <span className="corner-bl" />
-        <p className="stamp mb-3">Survey Parameters</p>
-        <div className="flex flex-wrap gap-x-6 gap-y-3 items-end">
+      {/* Filters */}
+      <section className="panel p-4 mb-4">
+        <div className="flex flex-wrap gap-x-5 gap-y-3 items-end">
           <FieldGroup label="Min score">
             <input
               type="number"
@@ -184,14 +169,14 @@ export default function FarmMapPage() {
               max={100}
               value={minScore}
               onChange={(e) => setMinScore(Number(e.target.value))}
-              className="field w-24 text-sm"
+              className="field w-20"
             />
           </FieldGroup>
-          <FieldGroup label="Jurisdiction">
+          <FieldGroup label="State">
             <select
               value={state}
               onChange={(e) => setState(e.target.value)}
-              className="field w-28 text-sm"
+              className="field w-28"
             >
               <option value="">All</option>
               <option value="LA">Louisiana</option>
@@ -203,7 +188,7 @@ export default function FarmMapPage() {
             <select
               value={basemap}
               onChange={(e) => setBasemap(e.target.value as Basemap)}
-              className="field w-32 text-sm"
+              className="field w-28"
             >
               <option value="street">Street</option>
               <option value="satellite">Satellite</option>
@@ -217,11 +202,11 @@ export default function FarmMapPage() {
                   <button
                     key={t}
                     onClick={() => toggleType(t)}
-                    className="tag transition-colors"
+                    className="text-xs px-2.5 py-1 rounded-full transition-colors"
                     style={{
-                      color: active ? "var(--parchment)" : "var(--ink-soft)",
-                      background: active ? "var(--ink)" : "transparent",
-                      borderColor: active ? "var(--ink)" : "var(--parchment-edge)",
+                      color: active ? "#04231a" : "var(--text-soft)",
+                      background: active ? "var(--accent)" : "transparent",
+                      border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
                     }}
                   >
                     {t.replace(/_/g, " ")}
@@ -231,40 +216,35 @@ export default function FarmMapPage() {
             </div>
           </FieldGroup>
           <FieldGroup label="Layers">
-            <div className="flex flex-col gap-1 text-xs" style={{ color: "var(--ink-soft)" }}>
+            <div className="flex gap-3 text-xs" style={{ color: "var(--text-soft)" }}>
               <CheckRow checked={showHeat}       onChange={setShowHeat}       label="Heat" />
               <CheckRow checked={showMarkers}    onChange={setShowMarkers}    label="Prospects" />
               <CheckRow checked={showProperties} onChange={setShowProperties} label="Properties" />
-              <CheckRow checked={showParishes}   onChange={setShowParishes}   label="Parish/county lines" />
+              <CheckRow checked={showParishes}   onChange={setShowParishes}   label="Boundaries" />
             </div>
           </FieldGroup>
-          <button onClick={() => load()} disabled={loading} className="btn-ink ml-auto">
-            {loading ? "Surveying…" : "Apply"}
+          <button onClick={() => load()} disabled={loading} className="btn-primary ml-auto">
+            {loading ? "Loading…" : "Apply"}
           </button>
         </div>
       </section>
 
-      {/* Filter chip + stats row */}
+      {/* Stats + parish chip */}
       <div className="flex items-stretch gap-3 mb-4">
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-3 flex-1">
-          <Stat folio="01" label="Prospects"  value={stats.total} />
-          <Stat folio="02" label="Hot (80+)"  value={stats.hot}   tone="oxblood" />
-          <Stat folio="03" label="Warm (60-79)" value={stats.warm} tone="gold" />
-          <Stat folio="04" label={`Properties${stats.activeProps > 0 ? ` (${stats.activeProps} active)` : ""}`} value={stats.props} tone="green" />
+          <Stat label="Prospects" value={stats.total} />
+          <Stat label="Hot (80+)"  value={stats.hot}  color="var(--hot)" />
+          <Stat label="Warm (60-79)" value={stats.warm} color="var(--warm)" />
+          <Stat label={`Properties${stats.activeProps > 0 ? ` (${stats.activeProps} active)` : ""}`} value={stats.props} color="var(--accent)" />
         </div>
         {parishLabel && (
-          <div
-            className="panel panel-shadow flex items-center gap-3 px-4 py-2"
-            style={{ background: "var(--ink)", borderColor: "var(--ink)", color: "var(--parchment)" }}
-          >
-            <p className="font-mono text-[0.65rem] tracking-widest uppercase" style={{ color: "var(--kraft)" }}>
-              Scoped to
-            </p>
-            <p className="font-display text-lg">{parishLabel}</p>
+          <div className="panel flex items-center gap-3 px-4">
+            <span className="text-xs" style={{ color: "var(--text-faded)" }}>Filter</span>
+            <p className="text-sm font-medium text-text">{parishLabel}</p>
             <button
               onClick={() => handleSelectParish(null)}
-              className="font-mono text-base hover:text-[var(--oxblood)] transition-colors"
+              className="text-base hover:text-[var(--hot)] transition-colors"
+              style={{ color: "var(--text-soft)" }}
               aria-label="Clear parish/county filter"
             >
               ×
@@ -273,32 +253,27 @@ export default function FarmMapPage() {
         )}
       </div>
 
-      {/* Legend — survey key */}
-      <section className="panel panel-shadow px-5 py-3 mb-4 flex flex-wrap gap-x-6 gap-y-2 items-center">
-        <p className="stamp">Survey Key</p>
-        <span className="text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
-          Prospects
-        </span>
-        <KeyRow shape="circle" color="var(--oxblood)"        label="80+" />
-        <KeyRow shape="circle" color="var(--gold)"           label="60–79" />
-        <KeyRow shape="circle" color="#caa033"               label="40–59" />
-        <KeyRow shape="circle" color="var(--slate-blue)"     label="<40" />
-        <span className="h-4 w-px" style={{ background: "var(--parchment-edge)" }} />
-        <span className="text-[0.7rem] font-mono uppercase tracking-wider" style={{ color: "var(--ink-faded)" }}>
-          Properties
-        </span>
-        <KeyRow shape="square" color="var(--survey-green)"   label="Active" />
-        <KeyRow shape="square" color="var(--slate-blue)"     label="Pending" />
-        <KeyRow shape="square" color="#7c3aed"               label="Sold" />
-        <KeyRow shape="square" color="var(--ink-faded)"      label="Other" />
+      {/* Legend */}
+      <section className="panel px-4 py-2.5 mb-4 flex flex-wrap gap-x-5 gap-y-2 items-center text-xs">
+        <span style={{ color: "var(--text-faded)" }}>Prospects</span>
+        <KeyRow shape="circle" color="#dc2626" label="80+" />
+        <KeyRow shape="circle" color="#f59e0b" label="60–79" />
+        <KeyRow shape="circle" color="#eab308" label="40–59" />
+        <KeyRow shape="circle" color="#3b82f6" label="<40" />
+        <span className="h-3 w-px" style={{ background: "var(--border)" }} />
+        <span style={{ color: "var(--text-faded)" }}>Properties</span>
+        <KeyRow shape="square" color="#10b981" label="Active" />
+        <KeyRow shape="square" color="#3b82f6" label="Pending" />
+        <KeyRow shape="square" color="#7c3aed" label="Sold" />
+        <KeyRow shape="square" color="#9ca3af" label="Other" />
       </section>
 
-      {/* Map — parchment frame + bottom-right resize via CSS resize:both */}
+      {/* Map */}
       <div
         ref={mapWrapRef}
         className="panel relative"
         style={{
-          padding: "10px",
+          padding: "8px",
           height: "720px",
           width: "100%",
           minHeight: "400px",
@@ -309,17 +284,10 @@ export default function FarmMapPage() {
           resize: "both",
         }}
       >
-        {/* Compass rose overlay */}
-        <div className="absolute top-5 right-5 z-[400] pointer-events-none">
-          <CompassRoseSmall />
-        </div>
-
-        {/* Map fills the framed area via absolute positioning so leaflet
-            gets explicit dimensions on first mount (heat layer needs them). */}
-        <div className="absolute inset-[10px]">
+        <div className="absolute inset-[8px]">
           {points.length === 0 && propertyPoints.length === 0 && !loading && !showParishes ? (
-            <div className="h-full flex items-center justify-center text-sm italic" style={{ color: "var(--ink-faded)" }}>
-              No geocoded prospects or properties yet. Press <span className="font-mono not-italic mx-1">Geocode Missing</span> to populate coordinates.
+            <div className="h-full flex items-center justify-center text-sm" style={{ color: "var(--text-faded)" }}>
+              No geocoded prospects or properties yet. Click <span className="font-medium mx-1">Geocode missing</span>.
             </div>
           ) : (
             <ProspectMap
@@ -336,27 +304,19 @@ export default function FarmMapPage() {
           )}
         </div>
 
-        {/* Stylized resize grip in the bottom-right. The native CSS handle
-            still does the actual work; this just makes it discoverable. */}
-        <div
-          className="absolute bottom-1 right-1 pointer-events-none"
-          style={{ width: "22px", height: "22px" }}
-          aria-hidden="true"
-        >
-          <svg width="22" height="22" viewBox="0 0 22 22">
-            <line x1="20" y1="6"  x2="6"  y2="20" stroke="var(--oxblood)" strokeWidth="1.5" />
-            <line x1="20" y1="11" x2="11" y2="20" stroke="var(--oxblood)" strokeWidth="1.5" />
-            <line x1="20" y1="16" x2="16" y2="20" stroke="var(--oxblood)" strokeWidth="1.5" />
+        {/* Resize grip in the bottom-right (CSS resize:both) */}
+        <div className="absolute bottom-1 right-1 pointer-events-none" style={{ width: "20px", height: "20px" }} aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 22 22">
+            <line x1="20" y1="6"  x2="6"  y2="20" stroke="var(--text-faded)" strokeWidth="1.2" />
+            <line x1="20" y1="11" x2="11" y2="20" stroke="var(--text-faded)" strokeWidth="1.2" />
+            <line x1="20" y1="16" x2="16" y2="20" stroke="var(--text-faded)" strokeWidth="1.2" />
           </svg>
         </div>
       </div>
 
-      {/* Dimension readout */}
-      <div className="flex items-center justify-end gap-3 mt-2 mb-6">
-        <span className="font-mono text-[0.65rem] tracking-widest uppercase" style={{ color: "var(--ink-faded)" }}>
-          Drag bottom-right corner · {displayDims.w} × {displayDims.h}
-        </span>
-      </div>
+      <p className="text-right text-xs mt-2 mb-8" style={{ color: "var(--text-faded)" }}>
+        Drag bottom-right corner · {displayDims.w} × {displayDims.h}
+      </p>
     </div>
   );
 }
@@ -364,7 +324,7 @@ export default function FarmMapPage() {
 function FieldGroup({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className}`}>
-      <span className="font-mono text-[0.65rem] tracking-widest uppercase" style={{ color: "var(--ink-faded)" }}>
+      <span className="text-xs" style={{ color: "var(--text-faded)" }}>
         {label}
       </span>
       {children}
@@ -379,30 +339,20 @@ function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (b
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-[var(--ink)]"
+        className="accent-[var(--accent)]"
       />
       {label}
     </label>
   );
 }
 
-function Stat({ folio, label, value, tone = "ink" }: { folio: string; label: string; value: number; tone?: "ink" | "oxblood" | "gold" | "green" }) {
-  const color =
-    tone === "oxblood" ? "var(--oxblood)" :
-    tone === "gold"    ? "var(--gold)" :
-    tone === "green"   ? "var(--survey-green)" :
-    "var(--ink)";
+function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
-    <div className="panel panel-shadow corner-ornaments p-4 relative">
-      <span className="corner-tr" />
-      <span className="corner-bl" />
-      <p className="font-mono text-[0.6rem] tracking-widest uppercase mb-1" style={{ color: "var(--ink-faded)" }}>
-        {folio}
-      </p>
-      <p className="font-display text-3xl leading-none" style={{ color }}>
+    <div className="panel p-4">
+      <p className="text-2xl font-medium" style={{ color: color ?? "var(--text)" }}>
         {value}
       </p>
-      <p className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
+      <p className="text-xs mt-1.5" style={{ color: "var(--text-soft)" }}>
         {label}
       </p>
     </div>
@@ -411,30 +361,12 @@ function Stat({ folio, label, value, tone = "ink" }: { folio: string; label: str
 
 function KeyRow({ shape, color, label }: { shape: "circle" | "square"; color: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>
+    <span className="inline-flex items-center gap-1.5" style={{ color: "var(--text-soft)" }}>
       <span
         className={shape === "circle" ? "w-2.5 h-2.5 rounded-full" : "w-2.5 h-2.5"}
-        style={{ background: color, border: "1px solid rgba(0,0,0,0.15)" }}
+        style={{ background: color, border: "1px solid rgba(255,255,255,0.18)" }}
       />
       {label}
     </span>
-  );
-}
-
-
-function CompassRoseSmall() {
-  return (
-    <svg width="56" height="56" viewBox="0 0 100 100" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}>
-      <circle cx="50" cy="50" r="46" fill="var(--parchment-deep)" stroke="var(--ink)" strokeWidth="1" opacity="0.95" />
-      <circle cx="50" cy="50" r="36" fill="none" stroke="var(--ink)" strokeWidth="0.4" opacity="0.4" />
-      <line x1="6"  y1="50" x2="94" y2="50" stroke="var(--ink)" strokeWidth="0.5" opacity="0.4" />
-      <line x1="50" y1="6"  x2="50" y2="94" stroke="var(--ink)" strokeWidth="0.5" opacity="0.4" />
-      <polygon points="50,10 54,50 50,46 46,50" fill="var(--oxblood)" />
-      <polygon points="50,90 54,50 50,54 46,50" fill="var(--ink)" />
-      <polygon points="10,50 50,46 46,50 50,54" fill="var(--ink)" opacity="0.7" />
-      <polygon points="90,50 50,46 54,50 50,54" fill="var(--ink)" opacity="0.7" />
-      <circle cx="50" cy="50" r="2.6" fill="var(--oxblood)" />
-      <text x="50" y="16" textAnchor="middle" fontFamily="var(--font-display)" fontSize="9" fill="var(--oxblood)">N</text>
-    </svg>
   );
 }
