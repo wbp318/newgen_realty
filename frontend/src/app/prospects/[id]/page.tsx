@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect, scoreProspect, generateOutreachMessage, skipTraceProspect } from "@/lib/api";
+import { getProspect, updateProspect, deleteProspect, enrichProspect, convertProspect, scoreProspect, generateOutreachMessage, skipTraceProspect, getIntegrationsStatus } from "@/lib/api";
 import type { Prospect } from "@/lib/types";
 import ProspectScoreBadge from "@/components/ui/ProspectScoreBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -48,11 +48,20 @@ export default function ProspectDetailPage() {
   const [converting, setConverting] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [skipTracing, setSkipTracing] = useState(false);
+  const [skipTraceConfigured, setSkipTraceConfigured] = useState<boolean | null>(null);
   const [generatingOutreach, setGeneratingOutreach] = useState(false);
   const [generatedMessage, setGeneratedMessage] = useState<{ subject: string | null; body: string; compliance_flags: string[] } | null>(null);
 
   useEffect(() => {
     loadProspect();
+    getIntegrationsStatus()
+      .then((r) => {
+        const skip = r.data.integrations.find(
+          (i: { key: string }) => i.key === "skip_trace"
+        );
+        setSkipTraceConfigured(skip?.configured ?? false);
+      })
+      .catch(() => setSkipTraceConfigured(false));
   }, [id]);
 
   async function loadProspect() {
@@ -427,13 +436,30 @@ export default function ProspectDetailPage() {
               >
                 {enriching ? "Enriching..." : "Enrich with ATTOM Data"}
               </button>
-              <button
-                onClick={handleSkipTrace}
-                disabled={skipTracing}
-                className="w-full text-sm bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {skipTracing ? "Tracing..." : "Skip Trace (Find Contact Info)"}
-              </button>
+              {skipTraceConfigured ? (
+                <button
+                  onClick={handleSkipTrace}
+                  disabled={skipTracing}
+                  className="w-full text-sm bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {skipTracing ? "Tracing..." : "Skip Trace (Find Contact Info)"}
+                </button>
+              ) : (
+                <div className="w-full text-xs border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <p className="font-medium text-gray-700">Skip Trace</p>
+                  <p className="text-gray-500 mt-0.5">
+                    Requires a paid provider. The free fallback returns no useful data.
+                  </p>
+                  <a
+                    href="https://www.batchskiptracing.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-600 hover:underline inline-block mt-1.5"
+                  >
+                    Get a key →
+                  </a>
+                </div>
+              )}
               <button
                 onClick={handleScore}
                 disabled={scoring}
