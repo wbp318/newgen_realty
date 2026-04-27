@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
+    # Public URL Twilio is configured to POST to. Used for X-Twilio-Signature
+    # validation when the FastAPI server sits behind a reverse proxy / ngrok
+    # and sees a different URL than the one Twilio signed with. Leave empty
+    # in plain local dev; the request URL will be used as-is.
+    TWILIO_WEBHOOK_URL: str = ""
     INBOUND_WEBHOOK_SECRET: str = ""
     # Drip scheduler
     SCHEDULER_ENABLED: bool = True

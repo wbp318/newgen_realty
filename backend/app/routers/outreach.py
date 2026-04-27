@@ -706,10 +706,20 @@ async def twilio_webhook(
     Twilio posts application/x-www-form-urlencoded. An inbound SMS includes a
     'Body' field; a status callback includes 'MessageSid' and 'MessageStatus'.
     """
-    # Twilio signature validation is best done with their SDK helper, but we
-    # accept any request when no secret is configured (local dev).
     form = await request.form()
-    params = dict(form)
+    params = {k: str(v) for k, v in form.items()}
+
+    # Validate X-Twilio-Signature when TWILIO_AUTH_TOKEN is set. Without this,
+    # an attacker who knows the URL can forge inbound SMS — including STOP
+    # keywords that would mark real prospects as do-not-contact.
+    if settings.TWILIO_AUTH_TOKEN:
+        from twilio.request_validator import RequestValidator
+        validator = RequestValidator(settings.TWILIO_AUTH_TOKEN)
+        # When behind a reverse proxy / ngrok, request.url shows the internal
+        # URL, not the one Twilio signed against. Allow override via config.
+        webhook_url = settings.TWILIO_WEBHOOK_URL or str(request.url)
+        if not validator.validate(webhook_url, params, x_twilio_signature or ""):
+            raise HTTPException(status_code=401, detail="Invalid Twilio signature")
 
     # Inbound SMS reply
     if params.get("Body") and params.get("From"):

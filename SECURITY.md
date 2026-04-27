@@ -171,34 +171,23 @@ type safety, IDE help, and self-documenting.
 
 ---
 
-### 9. **Twilio webhook signature not verified (NEW finding)**
+### 9. ~~Twilio webhook signature not verified~~ → DONE
 
-**Current state:** `POST /api/outreach/webhooks/twilio` reads
-`X-Twilio-Signature` header but never validates it, even when
-`INBOUND_WEBHOOK_SECRET` is set. The Resend webhook handler does
-verify HMAC; the Twilio handler does not. An attacker who knows the
-URL can forge inbound SMS replies and STOP messages.
+`POST /api/outreach/webhooks/twilio` now validates `X-Twilio-Signature`
+using `twilio.request_validator.RequestValidator` whenever
+`TWILIO_AUTH_TOKEN` is configured. Forged STOPs and forged status
+callbacks are rejected with 401.
 
-**What to fix:**
-```python
-from twilio.request_validator import RequestValidator
+A new `TWILIO_WEBHOOK_URL` env var lets the operator override the URL
+used for signature validation when the FastAPI server sits behind a
+reverse proxy / ngrok and `request.url` differs from the URL Twilio
+signed against. Empty by default — uses the request URL directly.
 
-if settings.TWILIO_AUTH_TOKEN:
-    validator = RequestValidator(settings.TWILIO_AUTH_TOKEN)
-    url = str(request.url)
-    if not validator.validate(url, params, x_twilio_signature or ""):
-        raise HTTPException(status_code=401, detail="Invalid signature")
-```
-
-**Why it matters:** A forged STOP can mark a real prospect as
-do-not-contact, killing legitimate campaigns. A forged inbound SMS can
-inject content into Activity logs.
-
-**Risk while undeployed:** Minimal — the webhook URL isn't reachable
-from the internet during local dev. Becomes high-priority before any
-public deployment.
-
-**Estimated effort:** 30 minutes.
+Test verified in-process with `TestClient`:
+  - No signature → 401
+  - Bogus signature → 401
+  - Valid signature → 200
+  - (No token configured → still accepts in dev, unchanged)
 
 ---
 
@@ -237,7 +226,7 @@ Before going live, confirm each item:
 - [x] Server header suppressed (`--no-server-header`)
 - [x] AI daily cost cap
 - [x] Resend webhook HMAC verified
-- [ ] **Twilio webhook signature verified** (Item 9)
+- [x] Twilio webhook X-Twilio-Signature verified (Item 9)
 - [ ] Rate limit on prospect/property create endpoints (Item 2 follow-up)
 - [ ] Authentication implemented (Item 1)
 - [ ] Request logging w/ user attribution (Item 6)
@@ -262,5 +251,5 @@ Before going live, confirm each item:
 
 ## Audit changelog
 
-- **2026-04-27 (v0.2.5):** Rate limiting, security headers, Server-header suppression, max_length on text fields, JSON-size validator, geocoder fallback chain, county-portal directory replacing broken scrapers. New findings: Twilio webhook signature not verified, geocoder DoS via unrestricted creates. Auth deferred per operating decision.
+- **2026-04-27 (v0.2.5):** Rate limiting, security headers, Server-header suppression, max_length on text fields, JSON-size validator, geocoder fallback chain, county-portal directory replacing broken scrapers, **Twilio webhook signature validation**. Open finding: geocoder DoS via unrestricted creates. Auth deferred per operating decision.
 - **2026-04-15 (v0.2.0):** Initial audit. Identified 9 pre-production items. Verified SQLi/XSS/error-leakage already handled.
