@@ -83,7 +83,7 @@ All follow the same pattern established by `services/market_data.py`: sync funct
 - `services/county_data.py` — Free county/parish portal scrapers for LA, AR, MS
 - `services/email_sender.py` — Resend transactional email. Lazy-imports the SDK inside `send_email` so the backend boots without the library installed.
 - `services/sms_sender.py` — Twilio SMS. Normalizes US numbers to E.164; lazy-imports the SDK.
-- `services/geocoder.py` — OpenStreetMap Nominatim (free, no key). Enforces a 1.1s global throttle via a module-level lock; callers should expect ~1s per lookup. Per Nominatim ToS, send a descriptive `GEOCODE_USER_AGENT`.
+- `services/geocoder.py` — OpenStreetMap Nominatim (free, no key). Enforces a 1.1s global throttle via a module-level lock; callers should expect ~1s per lookup. Per Nominatim ToS, send a descriptive `GEOCODE_USER_AGENT`. **Falls back progressively** when a full address doesn't resolve: `street+city+state+zip → city+state+zip → city+state → zip+state`. Returns the first match plus a `precision` field (`"street" | "locality" | "postal"`). This means rural addresses where OSM has no street-level data still pin at the town centroid instead of failing silently.
 
 ### Drip send engine
 
@@ -104,11 +104,24 @@ Twilio webhooks require `python-multipart` (listed in `requirements.txt`) for fo
 
 ### Geocoding + Farm Map
 
-Every Prospect and Property has optional `latitude`/`longitude`/`geocoded_at` (Prospect uses `property_latitude`/`property_longitude`). `_apply_geocode()` in `routers/prospects.py` is called on both manual `POST /api/prospects` and ATTOM search imports — failures are silent (the row is still created, just without coordinates).
+Both Prospect and Property have optional `latitude`/`longitude`/`geocoded_at` (Prospect uses `property_latitude`/`property_longitude`; Property uses `latitude`/`longitude`). Each entity has its own `_apply_geocode()` helper in its router and is geocoded on create AND on address-component change in update. Failures are silent — the row is still created, just without coordinates. Geocoding uses `services/geocoder.py` with the progressive fallback described above.
 
-- `POST /api/prospects/geocode-backfill?limit=N` fills missing coords; ~1s per row.
-- `GET /api/prospects/geo` returns lightweight `ProspectGeoPoint[]` filtered by bounds, min_score, state, parish, status, and comma-separated types (max 10).
-- Frontend `/map` dynamically imports the Leaflet map client-side (`components/map/ProspectMap.tsx`). Features: basemap toggle (OSM street or Esri World Imagery satellite — both free, no API keys), heat overlay, color-coded `CircleMarker`s, and a parish/county boundary overlay fetched from the static asset `frontend/public/parishes-la-ar-ms.geojson` (LA/AR/MS only, from Census TIGER FIPS-filtered data). Clicking a parish filters the visible prospects to that parish via the `parish` query param. Auto-fits bounds to the loaded points on first render.
+Backfill + geo endpoints exist for both entities:
+- `POST /api/prospects/geocode-backfill?limit=N` and `POST /api/properties/geocode-backfill?limit=N` — fill missing coords; ~1s per row.
+- `GET /api/prospects/geo` returns `ProspectGeoPoint[]` filtered by bounds, min_score, state, parish, status, and comma-separated types (max 10).
+- `GET /api/properties/geo` returns `PropertyGeoPoint[]` filtered by bounds, state, parish, status, and comma-separated property types.
+- The frontend's "Geocode missing" button calls `runGeocodeBackfill()` which hits both endpoints in parallel and merges the stats.
+
+Frontend `/map` dynamically imports `components/map/ProspectMap.tsx` client-side (must be `ssr: false` because `leaflet` and `leaflet.heat` reference `window` at import time). The map renders **two layers** simultaneously:
+- **Prospects** as `CircleMarker`s, colored by AI score (oxblood ≥80, gold 60-79, ochre 40-59, slate-blue <40)
+- **Properties** as square markers via Leaflet `divIcon`, colored by status (survey-green active, slate-blue pending, purple sold, sepia other)
+
+Other features: basemap toggle (OSM street or Esri World Imagery satellite — both free, no API keys), heat overlay (prospects only), parish/county boundary overlay fetched from the static asset `frontend/public/parishes-la-ar-ms.geojson` (LA/AR/MS only, from Census TIGER FIPS-filtered data). Clicking a parish filters both layers to that parish via the `parish` query param. Auto-fits bounds to the loaded points on first render.
+
+Three small helper components live in `ProspectMap.tsx` and matter for stability:
+- `ResizeWatcher` — `ResizeObserver` on the map container that calls `map.invalidateSize()` when the parent resizes. Required because the map container is user-resizable (CSS `resize: both` on the parchment frame).
+- `CursorAnchoredZoom` — patches `map.zoomIn`/`map.zoomOut` so the +/- buttons and keyboard zoom toward the cursor (like Google Maps / ArcGIS) instead of the center. Wheel zoom is already cursor-anchored by Leaflet default.
+- `HeatLayer` — defers `addTo(map)` via `requestAnimationFrame` until `map.getSize()` reports non-zero. The heat plugin's canvas would otherwise crash with "source height is 0" if mounted into a still-resizing flex parent.
 
 ### Prospecting Engine
 
@@ -138,17 +151,38 @@ Activity model has `contact_id`, `property_id`, and `prospect_id` columns (all n
 
 ### Frontend
 
-Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/api.ts` (axios, baseURL defaults to `localhost:8000`). Types in `lib/types.ts` (20+ interfaces). Path alias: `@/*` → `./src/*`. Tailwind v4 (no config file, uses defaults).
+Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/api.ts` (axios, baseURL defaults to `localhost:8000` via `NEXT_PUBLIC_API_URL`). Types in `lib/types.ts`. Path alias: `@/*` → `./src/*`. Tailwind v4 (no `tailwind.config.js`).
 
-Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot leads), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail with drip sequence builder + messages table), `/map` (Farm Map — geographic view of prospects with heat + markers).
+Key pages: `/` (dashboard with pipeline funnel, top prospects, campaigns, hot leads), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail with drip sequence builder + messages table), `/map` (Farm Map — both prospects and properties layered geographically).
 
-Leaflet/react-leaflet are used only on `/map`. The map component **must** be loaded via `next/dynamic` with `ssr: false` because `leaflet` and `leaflet.heat` reference `window` at import time. `leaflet/dist/leaflet.css` is imported inside `components/map/ProspectMap.tsx`.
+#### Cartographer design system
+
+`app/globals.css` defines a custom design system named after the "Office of the Cartographer." Don't use vanilla Tailwind colors (`bg-white`, `text-gray-500`, `border-gray-200`) on user-facing pages — they will look out of place against the parchment background. Use the design system primitives instead:
+
+- **Palette CSS variables** (set in `:root`, exposed to Tailwind via `@theme inline`): `--parchment` / `--parchment-deep` / `--parchment-edge` (page + panel surfaces), `--ink` / `--ink-soft` / `--ink-faded` (text hierarchy), `--oxblood` / `--oxblood-deep` (primary accent + hot prospect color), `--survey-green` (active properties), `--gold` / `--slate-blue` / `--kraft` (secondary tones).
+- **Typography** loaded via `next/font` in `layout.tsx`: `--font-display` (DM Serif Display, headlines), `--font-body` (Newsreader, default), `--font-mono` (JetBrains Mono, eyebrows / coordinates / tags). Use `font-display` / `font-body` / `font-mono` utility classes.
+- **Component utilities**:
+  - `.panel` + `.panel-shadow` — parchment surfaces with hairline edges
+  - `.corner-ornaments` (with `<span class="corner-tr">` / `<span class="corner-bl">` children) — decorative L-shaped corner brackets
+  - `.btn-ink` / `.btn-ghost` — primary and ghost buttons in monospace small caps
+  - `.field` — input/select with parchment background and ink focus
+  - `.tag` — small uppercase pill chips
+  - `.stamp` (oxblood) / `.stamp-ink` (ink-soft) — eyebrow-text stamps
+  - `.rule-fleuron` — decorative hairline rule with a fleuron in the middle
+  - `.paper-grain` / `.paper-grain-soft` / `.topo-bg` — subtle SVG/data-URI textures
+- **Leaflet popups** are restyled in `globals.css` to match the parchment palette.
+
+The atlas-spine sidebar (`components/layout/Sidebar.tsx`) is sticky (`position: sticky; top: 0`) and uses a TOC-style nav with leader dots and Roman folio numbers. Pages should be wrapped in `<div className="max-w-[1400px] mx-auto">` for consistent measure.
+
+#### Parish/County labeling
+
+Multi-state support requires careful UI labeling: LA uses "Parish", AR/MS use "County". Pages that have access to a `state` field should switch dynamically: ``state === "LA" ? "Parish" : "County"``. Pages where state isn't known up front (generic placeholders, dashboard summaries) should use the combined string `"Parish/County"`. Don't hardcode "Parish" alone in user-facing copy.
 
 ## Conventions
 
 - All models use `String(36)` UUID primary keys with `default=lambda: str(uuid.uuid4())`
 - Pydantic schemas use `class Config: from_attributes = True` for ORM mode
-- Multi-state: supports Louisiana (parishes), Arkansas (counties), and Mississippi (counties) — state-specific legal frameworks, property considerations, and market context are in `prompts/system_prompts.py`. Frontend dynamically labels "Parish" vs "County" based on state.
+- Multi-state: supports Louisiana (parishes), Arkansas (counties), and Mississippi (counties) — state-specific legal frameworks, property considerations, and market context are in `prompts/system_prompts.py`. UI labeling rules covered under Frontend → Parish/County labeling.
 - The `parish` DB column stores parish (LA) or county (AR/MS) — the field name is historical but works for all three states
 - CORS only allows `http://localhost:3000`
 - List endpoints support `limit`/`offset` pagination (default 50, max 200)
