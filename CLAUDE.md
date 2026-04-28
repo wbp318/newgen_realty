@@ -161,7 +161,7 @@ Activity model has `contact_id`, `property_id`, and `prospect_id` columns (all n
 
 Next.js 16 App Router with `"use client"` pages. All API calls go through `lib/api.ts` (axios, baseURL defaults to `localhost:8000` via `NEXT_PUBLIC_API_URL`). Types in `lib/types.ts`. Path alias: `@/*` → `./src/*`. Tailwind v4 (no `tailwind.config.js`).
 
-Key pages: `/` (dashboard — pipeline funnel, top prospects, campaigns, hot leads, Data Sources panel, Recent Activity), `/ai` (chat + listing gen + comm drafting), `/prospects` (list with bulk actions + CSV export), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment, gated skip-trace), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail — drip sequence, Performance stats, messages table), `/map` (Farm Map — both prospects and properties layered geographically), `/portals` (curated LA/AR/MS public-record portal directory linked from the Data Sources panel).
+Key pages: `/` (dashboard — pipeline funnel, top prospects, campaigns, hot leads, Data Sources panel, Recent Activity), `/ai` (chat + listing gen + comm drafting — assistant replies are rendered as markdown via `react-markdown` + `remark-gfm` with a custom `components` map for the dark theme; user bubbles stay plain text), `/prospects` (list with bulk actions + CSV export), `/prospects/search` (ATTOM search), `/prospects/[id]` (detail with scoring, outreach, enrichment, gated skip-trace), `/outreach` (campaign dashboard), `/outreach/[id]` (campaign detail — drip sequence, Performance stats, messages table), `/map` (Farm Map — both prospects and properties layered geographically), `/portals` (curated LA/AR/MS public-record portal directory linked from the Data Sources panel).
 
 #### Design system
 

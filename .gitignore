@@ -20,6 +20,9 @@ node_modules/
 out/
 npm-debug.log*
 
+# Dev server logs
+dev.log
+
 # IDE
 .vscode/
 .idea/

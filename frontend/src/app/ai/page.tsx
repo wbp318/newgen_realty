@@ -1,8 +1,41 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { aiChat, generateListing, draftCommunication, getConversations, deleteConversation } from "@/lib/api";
 import type { ChatMessage, Conversation } from "@/lib/types";
+
+function AssistantMarkdown({ content }: { content: string }) {
+  return (
+    <div className="text-sm leading-relaxed space-y-2">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => <h3 className="font-display text-lg mt-1 mb-2">{children}</h3>,
+          h2: ({ children }) => <h4 className="font-semibold text-[15px] mt-3 mb-1.5">{children}</h4>,
+          h3: ({ children }) => <h5 className="font-semibold text-sm mt-2 mb-1">{children}</h5>,
+          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 mb-2">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 mb-2">{children}</ol>,
+          li: ({ children }) => <li className="leading-snug">{children}</li>,
+          strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
+          em: ({ children }) => <em className="italic text-text-soft">{children}</em>,
+          a: ({ href, children }) => <a href={href} className="link" target="_blank" rel="noopener noreferrer">{children}</a>,
+          code: ({ children }) => <code className="font-mono text-[12px] bg-bg-elevated/60 border border-border-soft rounded px-1 py-0.5">{children}</code>,
+          pre: ({ children }) => <pre className="font-mono text-[12px] bg-bg border border-border-soft rounded-lg p-3 overflow-x-auto my-2">{children}</pre>,
+          hr: () => <hr className="my-3 border-border-soft" />,
+          blockquote: ({ children }) => <blockquote className="border-l-2 border-accent/60 pl-3 text-text-soft italic my-2">{children}</blockquote>,
+          table: ({ children }) => <div className="overflow-x-auto my-2"><table className="text-xs border-collapse">{children}</table></div>,
+          th: ({ children }) => <th className="border border-border-soft px-2 py-1 text-left font-semibold">{children}</th>,
+          td: ({ children }) => <td className="border border-border-soft px-2 py-1">{children}</td>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 const quickActions = [
   { id: "chat", label: "General Chat", desc: "Ask anything about LA, AR, or MS real estate" },
@@ -150,37 +183,37 @@ export default function AIAssistantPage() {
   return (
     <div className="flex h-[calc(100vh-3rem)] gap-4">
       {/* Sidebar - Quick Actions */}
-      <div className="w-72 bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
-        <h2 className="font-semibold text-gray-900 mb-2">Quick Actions</h2>
+      <div className="w-72 panel rounded-xl p-4 flex flex-col gap-2">
+        <h2 className="font-display text-base text-text mb-2">Quick Actions</h2>
         {quickActions.map((action) => (
           <button
             key={action.id}
             onClick={() => setActiveAction(action.id)}
-            className={`text-left p-3 rounded-lg transition-colors ${
+            className={`text-left p-3 rounded-lg transition-colors border ${
               activeAction === action.id
-                ? "bg-emerald-50 border-2 border-emerald-300"
-                : "border-2 border-transparent hover:bg-gray-50"
+                ? "border-accent/50 bg-accent/10"
+                : "border-transparent hover:border-border hover:bg-bg-elevated/40"
             }`}
           >
-            <div className="font-medium text-sm text-gray-900">{action.label}</div>
-            <div className="text-xs text-gray-500">{action.desc}</div>
+            <div className="font-medium text-sm text-text">{action.label}</div>
+            <div className="text-xs text-text-soft mt-0.5">{action.desc}</div>
           </button>
         ))}
 
         {/* Listing Form */}
         {activeAction === "listing" && (
           <form onSubmit={handleGenerateListing} className="mt-4 space-y-2 text-sm">
-            <input placeholder="Street Address" value={listingForm.street_address} onChange={(e) => setListingForm({ ...listingForm, street_address: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" required />
-            <input placeholder="City" value={listingForm.city} onChange={(e) => setListingForm({ ...listingForm, city: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" required />
+            <input placeholder="Street Address" value={listingForm.street_address} onChange={(e) => setListingForm({ ...listingForm, street_address: e.target.value })} className="field w-full text-sm" required />
+            <input placeholder="City" value={listingForm.city} onChange={(e) => setListingForm({ ...listingForm, city: e.target.value })} className="field w-full text-sm" required />
             <div className="grid grid-cols-3 gap-2">
-              <input placeholder={listingForm.state === "LA" ? "Parish" : "County"} value={listingForm.parish} onChange={(e) => setListingForm({ ...listingForm, parish: e.target.value })} className="col-span-2 border rounded px-2 py-1 text-gray-900" required />
-              <select value={listingForm.state} onChange={(e) => setListingForm({ ...listingForm, state: e.target.value })} className="border rounded px-2 py-1 text-gray-900">
+              <input placeholder={listingForm.state === "LA" ? "Parish" : "County"} value={listingForm.parish} onChange={(e) => setListingForm({ ...listingForm, parish: e.target.value })} className="field text-sm col-span-2" required />
+              <select value={listingForm.state} onChange={(e) => setListingForm({ ...listingForm, state: e.target.value })} className="field text-sm">
                 <option value="LA">LA</option>
                 <option value="AR">AR</option>
                 <option value="MS">MS</option>
               </select>
             </div>
-            <select value={listingForm.property_type} onChange={(e) => setListingForm({ ...listingForm, property_type: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900">
+            <select value={listingForm.property_type} onChange={(e) => setListingForm({ ...listingForm, property_type: e.target.value })} className="field w-full text-sm">
               <option value="single_family">Single Family</option>
               <option value="multi_family">Multi Family</option>
               <option value="condo">Condo</option>
@@ -189,22 +222,22 @@ export default function AIAssistantPage() {
               <option value="commercial">Commercial</option>
             </select>
             <div className="grid grid-cols-2 gap-2">
-              <input placeholder="Beds" type="number" value={listingForm.bedrooms} onChange={(e) => setListingForm({ ...listingForm, bedrooms: e.target.value })} className="border rounded px-2 py-1 text-gray-900" />
-              <input placeholder="Baths" type="number" step="0.5" value={listingForm.bathrooms} onChange={(e) => setListingForm({ ...listingForm, bathrooms: e.target.value })} className="border rounded px-2 py-1 text-gray-900" />
+              <input placeholder="Beds" type="number" value={listingForm.bedrooms} onChange={(e) => setListingForm({ ...listingForm, bedrooms: e.target.value })} className="field text-sm" />
+              <input placeholder="Baths" type="number" step="0.5" value={listingForm.bathrooms} onChange={(e) => setListingForm({ ...listingForm, bathrooms: e.target.value })} className="field text-sm" />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <input placeholder="Sq Ft" type="number" value={listingForm.sqft} onChange={(e) => setListingForm({ ...listingForm, sqft: e.target.value })} className="border rounded px-2 py-1 text-gray-900" />
-              <input placeholder="Year Built" type="number" value={listingForm.year_built} onChange={(e) => setListingForm({ ...listingForm, year_built: e.target.value })} className="border rounded px-2 py-1 text-gray-900" />
+              <input placeholder="Sq Ft" type="number" value={listingForm.sqft} onChange={(e) => setListingForm({ ...listingForm, sqft: e.target.value })} className="field text-sm" />
+              <input placeholder="Year Built" type="number" value={listingForm.year_built} onChange={(e) => setListingForm({ ...listingForm, year_built: e.target.value })} className="field text-sm" />
             </div>
-            <input placeholder="Asking Price" type="number" value={listingForm.asking_price} onChange={(e) => setListingForm({ ...listingForm, asking_price: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" />
-            <textarea placeholder="Notable features, notes..." value={listingForm.notes} onChange={(e) => setListingForm({ ...listingForm, notes: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" rows={2} />
-            <select value={listingForm.tone} onChange={(e) => setListingForm({ ...listingForm, tone: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900">
+            <input placeholder="Asking Price" type="number" value={listingForm.asking_price} onChange={(e) => setListingForm({ ...listingForm, asking_price: e.target.value })} className="field w-full text-sm" />
+            <textarea placeholder="Notable features, notes..." value={listingForm.notes} onChange={(e) => setListingForm({ ...listingForm, notes: e.target.value })} className="field w-full text-sm" rows={2} />
+            <select value={listingForm.tone} onChange={(e) => setListingForm({ ...listingForm, tone: e.target.value })} className="field w-full text-sm">
               <option value="professional">Professional</option>
               <option value="luxury">Luxury</option>
               <option value="casual">Casual</option>
               <option value="investor">Investor</option>
             </select>
-            <button type="submit" disabled={loading} className="w-full bg-emerald-600 text-white rounded py-2 hover:bg-emerald-700 disabled:opacity-50">
+            <button type="submit" disabled={loading} className="btn-primary w-full rounded-lg py-2">
               {loading ? "Generating..." : "Generate Listing"}
             </button>
           </form>
@@ -212,23 +245,23 @@ export default function AIAssistantPage() {
 
         {/* Conversation History */}
         {activeAction === "chat" && conversations.length > 0 && (
-          <div className="mt-4 border-t pt-3">
+          <div className="mt-4 border-t border-border-soft pt-3">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase">History</h3>
-              <button onClick={startNewChat} className="text-xs text-emerald-600 hover:text-emerald-700">+ New</button>
+              <h3 className="text-xs font-semibold text-text-faded uppercase tracking-wide">History</h3>
+              <button onClick={startNewChat} className="text-xs text-accent hover:text-accent-soft">+ New</button>
             </div>
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {conversations.map((c) => (
-                <div key={c.id} className={`flex items-center gap-1 group ${conversationId === c.id ? "bg-emerald-50" : ""} rounded`}>
+                <div key={c.id} className={`flex items-center gap-1 group rounded ${conversationId === c.id ? "bg-accent/10" : ""}`}>
                   <button
                     onClick={() => loadConversation(c)}
-                    className="flex-1 text-left text-xs text-gray-700 px-2 py-1.5 rounded hover:bg-gray-50 truncate"
+                    className="flex-1 text-left text-xs text-text px-2 py-1.5 rounded hover:bg-bg-elevated/50 truncate"
                   >
                     {c.title || "Untitled"}
                   </button>
                   <button
                     onClick={() => handleDeleteConversation(c.id)}
-                    className="text-gray-400 hover:text-red-500 px-1 opacity-0 group-hover:opacity-100 text-xs"
+                    className="text-text-faded hover:text-red-400 px-1 opacity-0 group-hover:opacity-100 text-xs"
                   >
                     x
                   </button>
@@ -241,25 +274,25 @@ export default function AIAssistantPage() {
         {/* Communication Form */}
         {activeAction === "comm" && (
           <form onSubmit={handleDraftComm} className="mt-4 space-y-2 text-sm">
-            <input placeholder="Recipient Name" value={commForm.recipient_name} onChange={(e) => setCommForm({ ...commForm, recipient_name: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" required />
-            <select value={commForm.purpose} onChange={(e) => setCommForm({ ...commForm, purpose: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900">
+            <input placeholder="Recipient Name" value={commForm.recipient_name} onChange={(e) => setCommForm({ ...commForm, recipient_name: e.target.value })} className="field w-full text-sm" required />
+            <select value={commForm.purpose} onChange={(e) => setCommForm({ ...commForm, purpose: e.target.value })} className="field w-full text-sm">
               <option value="initial_outreach">Initial Outreach</option>
               <option value="follow_up">Follow Up</option>
               <option value="price_reduction">Price Reduction</option>
               <option value="offer_received">Offer Received</option>
               <option value="closing_update">Closing Update</option>
             </select>
-            <select value={commForm.medium} onChange={(e) => setCommForm({ ...commForm, medium: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900">
+            <select value={commForm.medium} onChange={(e) => setCommForm({ ...commForm, medium: e.target.value })} className="field w-full text-sm">
               <option value="email">Email</option>
               <option value="text">Text Message</option>
             </select>
-            <select value={commForm.tone} onChange={(e) => setCommForm({ ...commForm, tone: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900">
+            <select value={commForm.tone} onChange={(e) => setCommForm({ ...commForm, tone: e.target.value })} className="field w-full text-sm">
               <option value="professional">Professional</option>
               <option value="friendly">Friendly</option>
               <option value="urgent">Urgent</option>
             </select>
-            <textarea placeholder="Additional context..." value={commForm.context} onChange={(e) => setCommForm({ ...commForm, context: e.target.value })} className="w-full border rounded px-2 py-1 text-gray-900" rows={2} />
-            <button type="submit" disabled={loading} className="w-full bg-emerald-600 text-white rounded py-2 hover:bg-emerald-700 disabled:opacity-50">
+            <textarea placeholder="Additional context..." value={commForm.context} onChange={(e) => setCommForm({ ...commForm, context: e.target.value })} className="field w-full text-sm" rows={2} />
+            <button type="submit" disabled={loading} className="btn-primary w-full rounded-lg py-2">
               {loading ? "Drafting..." : "Draft Message"}
             </button>
           </form>
@@ -267,17 +300,17 @@ export default function AIAssistantPage() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 bg-white rounded-xl shadow-sm flex flex-col">
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-gray-900">AI Assistant</h1>
-          <p className="text-sm text-gray-500">Your LA, AR, and MS real estate AI — powered by Claude</p>
+      <div className="flex-1 panel rounded-xl flex flex-col">
+        <div className="p-4 border-b border-border-soft">
+          <h1 className="font-display text-xl text-text">AI Assistant</h1>
+          <p className="text-sm text-text-soft">Your LA, AR, and MS real estate AI — powered by Claude</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center text-gray-400 mt-20">
+            <div className="text-center text-text-faded mt-20">
               <p className="text-4xl mb-4">🏠</p>
-              <p className="text-lg font-medium">NewGen Realty AI</p>
+              <p className="font-display text-lg text-text">NewGen Realty AI</p>
               <p className="text-sm mt-2">Ask me anything about real estate in Louisiana, Arkansas, or Mississippi.</p>
             </div>
           )}
@@ -285,20 +318,22 @@ export default function AIAssistantPage() {
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
                 msg.role === "user"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-gray-100 text-gray-900"
+                  ? "bg-accent-deep text-white"
+                  : "bg-bg-elevated border border-border text-text"
               }`}>
-                <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
+                {msg.role === "user"
+                  ? <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                  : <AssistantMarkdown content={msg.content} />}
               </div>
             </div>
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-xl px-4 py-3">
+              <div className="bg-bg-elevated border border-border rounded-xl px-4 py-3">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-2 h-2 bg-text-faded rounded-full animate-bounce" />
+                  <span className="w-2 h-2 bg-text-faded rounded-full animate-bounce [animation-delay:0.1s]" />
+                  <span className="w-2 h-2 bg-text-faded rounded-full animate-bounce [animation-delay:0.2s]" />
                 </div>
               </div>
             </div>
@@ -307,16 +342,16 @@ export default function AIAssistantPage() {
         </div>
 
         {activeAction === "chat" && (
-          <form onSubmit={handleChat} className="p-4 border-t flex gap-2">
+          <form onSubmit={handleChat} className="p-4 border-t border-border-soft flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about LA, AR, or MS real estate..."
-              className="flex-1 border rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="field flex-1 text-sm"
               disabled={loading}
             />
-            <button type="submit" disabled={loading || !input.trim()} className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+            <button type="submit" disabled={loading || !input.trim()} className="btn-primary px-6 py-2 rounded-lg">
               Send
             </button>
           </form>
